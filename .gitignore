@@ -1,0 +1,8 @@
+.cache/
+build/
+computorv1
+computor_v1
+computorv1.exe
+computor_v1.exe
+*.test
+*.out
