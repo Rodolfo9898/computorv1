@@ -1,4 +1,6 @@
-package parser
+package main
+
+// The strict parser of the mandatory program: every term is a * X^p.
 
 import (
 	"fmt"
@@ -6,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"computorv1/src/base"
-	"computorv1/src/calculations"
+	"computorv1/src/equation"
+	"computorv1/src/poly"
 )
 
 // termPattern matches polynomial terms in the form: coefficient * x ^ exponent (e.g., "3 * x ^ 2")
@@ -24,34 +26,17 @@ var termPattern = regexp.MustCompile(`^([+-]?\s*\d+(?:\.\d+)?)\s*\*\s*[Xx]\s*\^\
 // numberPattern matches a constant on its own, like the 0 of "... = 0".
 var numberPattern = regexp.MustCompile(`^[+-]?\s*\d+(?:\.\d+)?$`)
 
-// ParseEquation subtracts the right side from the left, and returns the coefficients by exponent.
-func ParseEquation(input string) (base.PolyCoeffs, error) {
-	parts := strings.Split(input, "=")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("equation must contain exactly one '='")
-	}
-
-	left, err := parseSide(parts[0])
-	if err != nil {
-		return nil, err
-	}
-	right, err := parseSide(parts[1])
-	if err != nil {
-		return nil, err
-	}
-
-	for exp, coef := range right {
-		left[exp] = calculations.Sum(left[exp], -coef)
-	}
-	return left, nil
+// parseEquation reads an equation in the strict form of the subject, and reduces it.
+func parseEquation(input string) (poly.Equation, error) {
+	return equation.Parse(input, parseSide)
 }
 
-func parseSide(expr string) (base.PolyCoeffs, error) {
+func parseSide(expr string) ([]equation.Term, error) {
 	if strings.TrimSpace(expr) == "" {
 		return nil, fmt.Errorf("a side of the equation is empty")
 	}
 
-	coeffs := make(base.PolyCoeffs)
+	var terms []equation.Term
 	for _, raw := range splitTerms(expr) {
 		part := strings.TrimSpace(raw)
 		if part == "" { // the spaces before a leading sign
@@ -63,7 +48,9 @@ func parseSide(expr string) (base.PolyCoeffs, error) {
 			if err != nil {
 				return nil, fmt.Errorf("invalid number %q", part)
 			}
-			coeffs[0] = calculations.Sum(coeffs[0], value)
+			if value != 0 { // a lone 0 is the right side of "... = 0", not a term
+				terms = append(terms, equation.Term{Exp: 0, Coef: value})
+			}
 			continue
 		}
 
@@ -79,9 +66,9 @@ func parseSide(expr string) (base.PolyCoeffs, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid exponent in term %q", part)
 		}
-		coeffs[exp] = calculations.Sum(coeffs[exp], coeff)
+		terms = append(terms, equation.Term{Exp: exp, Coef: coeff})
 	}
-	return coeffs, nil
+	return terms, nil
 }
 
 // splitTerms cuts a side before each sign, except the sign of an exponent:

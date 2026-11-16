@@ -1,36 +1,24 @@
+//go:build bonus_mode
+
 package freeform
+
+// Free form entry, graded on its own (subject p.8): this parser, and the reduced
+// form written as by hand (natural.go).
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
 
-	"computorv1/src/base"
-	"computorv1/src/calculations"
+	"computorv1/src/equation"
+	"computorv1/src/poly"
 )
 
 // ParseEquation reads an equation in free form: "5 + 4 * X + X^2 = X^2", "2X = 4",
 // "x^2 - 1 = 0". It also reads the strict form of the mandatory part, which is
 // one of its cases. Every side is a sum of terms: [sign] [number] [*] [X[^n]].
-func ParseEquation(input string) (base.PolyCoeffs, error) {
-	parts := strings.Split(input, "=")
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("equation must contain exactly one '='")
-	}
-
-	left, err := parseSide(parts[0])
-	if err != nil {
-		return nil, err
-	}
-	right, err := parseSide(parts[1])
-	if err != nil {
-		return nil, err
-	}
-
-	for exp, coef := range right {
-		left[exp] = calculations.Sum(left[exp], -coef)
-	}
-	return left, nil
+func ParseEquation(input string) (poly.Equation, error) {
+	return equation.Parse(input, parseSide)
 }
 
 // scanner walks one side of the equation, byte by byte.
@@ -75,13 +63,13 @@ func (s *scanner) digits() string {
 	return s.text[start:s.pos]
 }
 
-func parseSide(expr string) (base.PolyCoeffs, error) {
+func parseSide(expr string) ([]equation.Term, error) {
 	s := &scanner{text: expr}
 	if s.done() {
 		return nil, fmt.Errorf("a side of the equation is empty")
 	}
 
-	coeffs := make(base.PolyCoeffs)
+	var terms []equation.Term
 	for first := true; !s.done(); first = false {
 		sign := 1.0
 		switch s.peek() {
@@ -96,60 +84,64 @@ func parseSide(expr string) (base.PolyCoeffs, error) {
 			}
 		}
 
-		coef, exp, err := parseTerm(s)
+		coef, exp, hasX, err := parseTerm(s)
 		if err != nil {
 			return nil, err
 		}
-		coeffs[exp] = calculations.Sum(coeffs[exp], sign*coef)
+		if coef == 0 && !hasX { // a lone 0 is the right side of "... = 0", not a term
+			continue
+		}
+		terms = append(terms, equation.Term{Exp: exp, Coef: sign * coef})
 	}
-	return coeffs, nil
+	return terms, nil
 }
 
 // parseTerm reads a term after its sign: "4", "4 * X", "4X", "X^2", "2.5 * x^3".
-func parseTerm(s *scanner) (float64, int, error) {
+// hasX is false for a constant written without X.
+func parseTerm(s *scanner) (coef float64, exp int, hasX bool, err error) {
 	coef, hasCoef, err := parseNumber(s)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, false, err
 	}
 
 	if s.peek() == '*' {
 		if !hasCoef {
-			return 0, 0, fmt.Errorf("'*' with no number before it, near %s", s.near())
+			return 0, 0, false, fmt.Errorf("'*' with no number before it, near %s", s.near())
 		}
 		s.pos++
 		if c := s.peek(); c != 'X' && c != 'x' {
-			return 0, 0, fmt.Errorf("expected X after '*', near %s", s.near())
+			return 0, 0, false, fmt.Errorf("expected X after '*', near %s", s.near())
 		}
 	}
 
 	if c := s.peek(); c != 'X' && c != 'x' {
 		if !hasCoef {
-			return 0, 0, fmt.Errorf("expected a number or X, near %s", s.near())
+			return 0, 0, false, fmt.Errorf("expected a number or X, near %s", s.near())
 		}
-		return coef, 0, nil
+		return coef, 0, false, nil
 	}
 	s.pos++
 
-	exp := 1
+	exp = 1
 	if s.peek() == '^' {
 		s.pos++
 		s.skipSpaces()
 		if s.pos < len(s.text) && s.text[s.pos] == '-' {
-			return 0, 0, fmt.Errorf("negative exponent near %s: a polynomial has none", s.near())
+			return 0, 0, false, fmt.Errorf("negative exponent near %s: a polynomial has none", s.near())
 		}
 		digits := s.digits()
 		if digits == "" {
-			return 0, 0, fmt.Errorf("missing exponent after '^', near %s", s.near())
+			return 0, 0, false, fmt.Errorf("missing exponent after '^', near %s", s.near())
 		}
 		if s.pos < len(s.text) && s.text[s.pos] == '.' {
-			return 0, 0, fmt.Errorf("the exponent %s... must be a whole number", digits)
+			return 0, 0, false, fmt.Errorf("the exponent %s... must be a whole number", digits)
 		}
 		exp, err = strconv.Atoi(digits)
 		if err != nil {
-			return 0, 0, fmt.Errorf("exponent %s is too large", digits)
+			return 0, 0, false, fmt.Errorf("exponent %s is too large", digits)
 		}
 	}
-	return coef, exp, nil
+	return coef, exp, true, nil
 }
 
 // parseNumber reads digits[.digits], if there is a number there; the coefficient

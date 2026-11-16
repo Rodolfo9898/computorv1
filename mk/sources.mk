@@ -10,27 +10,33 @@
 #                                                                              #
 # **************************************************************************** #
 
-# One Go package per folder of src/. The program is built from cmd/ (main.go),
-# which picks the mandatory part (cmd/mandatory) or the bonus (cmd/bonus): one
-# binary for both, the bonus only runs with --bonus.
-CMD_SRCS = main.go mandatory/cmd_mandatory.go bonus/cmd_bonus.go
+# One folder per program, each with its main() in main.go (like push_swap's
+# push_swap/ and bonus/): computor/, and bonus/ for the bonus program. Then the
+# folders both programs share.
+MANDATORY_DIR = computor
+BONUS_DIR = bonus
 
-# The mandatory part: read, parse strictly, reduce, solve.
-BASE_SRCS = functions.go structs.go types.go
-CALCULATIONS_SRCS = numeric.go
-CORE_SRCS = parser/parser.go formatter/formatter.go
-EXECUTION_SRCS = solve.go
-IO_SRCS = input.go
+# Shared by both programs: reading the arguments, the reduced equation, the
+# arithmetic, the reduction of the parsed terms, the printing and the solver.
+SHARED_SRCS = input/input.go poly/poly.go numeric/numeric.go \
+			equation/equation.go formatter/formatter.go \
+			solver/solve.go solver/print.go
 
-# The bonus: one package per feature.
-BONUS_SRCS = check/check.go colors/colors.go factored/factored.go \
-			fractions/format.go freeform/parser.go steps/output.go \
-			validator/validator.go
+# ./computor_v1: its main() and the strict parser.
+MANDATORY_SRCS = main.go parser.go
 
-GO_FILES = $(addprefix $(SRC_DIR)/cmd/,$(CMD_SRCS)) \
-			$(addprefix $(SRC_DIR)/base/,$(BASE_SRCS)) \
-			$(addprefix $(SRC_DIR)/calculations/,$(CALCULATIONS_SRCS)) \
-			$(addprefix $(SRC_DIR)/core/,$(CORE_SRCS)) \
-			$(addprefix $(SRC_DIR)/execution/,$(EXECUTION_SRCS)) \
-			$(addprefix $(SRC_DIR)/io/,$(IO_SRCS)) \
-			$(addprefix $(SRC_DIR)/bonus/,$(BONUS_SRCS))
+# ./computor_v1_bonus, which only make bonus builds: every one of its files starts
+# with //go:build bonus_mode, so it is compiled with -tags bonus_mode only
+# (BONUS_TAG), as a C bonus with -D BONUS_MODE=1. Its main(), free form entry
+# (graded on its own), then the five features of the subject, one folder each:
+# 1. entry mistakes, 2. fractions, 3. steps, 4. factored form, 5. check.
+BONUS_SRCS = main.go freeform/parser.go freeform/natural.go \
+			mistakes/mistakes.go mistakes/colors.go fractions/format.go \
+			steps/output.go factored/factored.go check/check.go
+
+SHARED_FILES = $(addprefix $(SRC_DIR)/,$(SHARED_SRCS))
+
+MANDATORY_FILES = $(addprefix $(SRC_DIR)/$(MANDATORY_DIR)/,$(MANDATORY_SRCS)) \
+			$(SHARED_FILES)
+BONUS_FILES = $(addprefix $(SRC_DIR)/$(BONUS_DIR)/,$(BONUS_SRCS)) \
+			$(SHARED_FILES)

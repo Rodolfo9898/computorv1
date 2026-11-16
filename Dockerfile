@@ -1,13 +1,13 @@
-# Linux test image for computor_v1: builds ./computor_v1 with the Go toolchain the
-# project needs (go.mod asks for Go 1.25.4 or later), then runs the checks:
+# Linux test image for computor_v1: builds ./computor_v1 (make) and ./computor_v1_bonus
+# (make bonus) with the Go toolchain the project needs (go.mod asks for Go 1.25.4 or later), then runs the checks:
 # tests/mandatory.sh, then tests/bonus.sh, both using tests/setup.sh.
 #   - every example of the subject must give its reduced form, its degree and its
 #     solutions, and so must equations with zero, negative, decimal or large
 #     coefficients, and an equation read on the standard input;
 #   - malformed equations must be refused with an error, without a crash;
-#   - the bonus modes (free form, validation, fractions, steps, natural form,
-#     factored form, check, interactive) must do what
-#     ./computor_v1 --help and the README say.
+#   - the bonus, free form entry and its five features (entry mistakes, fractions,
+#     steps, factored form, check), must do what ./computor_v1_bonus --help and the
+#     README say.
 # The exit status is the total number of failed checks.
 #
 #   make docker-mandatory                                   # mandatory part only
@@ -24,6 +24,6 @@ RUN apt-get update \
 
 WORKDIR /work
 COPY . .
-RUN make
+RUN make && make bonus
 
 CMD ["bash", "-c", "bash tests/mandatory.sh; m=$?; bash tests/bonus.sh; exit $((m + $?))"]

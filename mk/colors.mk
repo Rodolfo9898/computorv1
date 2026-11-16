@@ -42,6 +42,12 @@ warn = printf '$(YELLOW)warning: %s$(RESET)\n' '$(1)'
 run = set -o pipefail; printf '$(GREEN)%s$(RESET)\n' '$(1)'; \
 	$(1) 2>&1 | $(COLORIZE)
 
+# $(call need_go): stops the rule, with a message, when Go is not installed.
+need_go = if ! command -v $(GO) >/dev/null; then \
+		printf '$(RED)%s$(RESET)\n' "$(GO) not found: install Go 1.25.4 or later, or use make docker-shell (see the README)"; \
+		exit 1; \
+	fi
+
 # $(call exists,paths): true when at least one of the paths (or patterns) exists.
 exists = [ -n "$$(ls -d $(1) 2>/dev/null)" ]
 

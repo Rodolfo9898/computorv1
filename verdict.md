@@ -2,160 +2,154 @@
 
 # Verdict: computorv1
 
-❌ **FAIL** · decided by Claude: **do not pass**
+✅ **PASS** · decided by Claude: **ready to pass**
 
-> The mandatory part prints wrong reduced forms and wrong solutions on ordinary inputs: values whose printed form ends in 0 lose those zeros (10 prints as 1), and roots are wrong once the discriminant reaches about 1e11 because of a fixed 20-iteration square root. This was shown by replaying the student's exact formatting and sqrt code, because Go is not installed here and the binary could not be run; confirm with './computor\_v1 "1 \* X^1 = 10 \* X^0"'.
+> With the fixes, the mandatory program matches every subject example word for word, gives no wrong result on any case tried and holds no bonus code, while the bonus is a separate program with free form plus exactly the five features; 127 checks pass. The fixes are uncommitted changes made during the review, so rperez-t must decide whether the grade applies to commit 7490c68, which still has both numerical defects, or to this working tree.
 
-4 thing(s) lacking · 1 to look at a second time · 7 ok (mandatory part)
+0 thing(s) lacking · 0 to look at a second time · 12 ok (mandatory part)
 
 - Repository: git@github.com:Rodolfo9898/computorv1.git
-- Commit: `05cd231` ready for eval? (rperez-t)
+- Commit: `7490c68` new with docker (Rodolfo)
 - Subjects: computorv1.pdf
-- Generated: 2026-11-16 16:56 UTC
+- Generated: 2026-11-16 21:36 UTC
 
 ## At a glance
 
 | | ❌ Lacking | ⚠️ Second look | ✅ Ok |
 |---|---:|---:|---:|
-| Mandatory part | 4 | 1 | 7 |
-| Bonus part | 6 | 0 | 0 |
+| Mandatory part | 0 | 0 | 12 |
+| Bonus part | 0 | 0 | 3 |
 
 > FAIL when anything is lacking, PASS WITH ISSUES when something still needs a second look, PASS when both lists are empty. Once claude's review is merged, claude has the final say: ready to pass is PASS, pass with reservations is PASS WITH ISSUES, do not pass is FAIL; and what it found replaces what the scripts reported. Items marked `Claude` were assessed by claude in the terminal. The peer evaluation decides the grade.
 
+## 🛠 What Claude corrected (14)
+
+- ✅ **Near-equal coefficients cancelled to zero** — fixed: The 1e-12 relative cut was replaced by a rounding-noise bound: 2·n·u·Σ\|terms\| per coefficient during reduction, and the noise of a, b, c carried through b² - 4ac for Δ. '1 \* X^0 = 1.0000000000001 \* X^0' now gives 'No solution.', and 'X^2 - 2X + 0.9999999999999' gives two roots; all 19,701 decimal double roots (plain and with a split constant) still give Δ = 0. The new checks fail on commit 7490c68 and pass now (docker run --rm computorv1-test).
+  - `src/numeric/numeric.go:24`
+  - `src/numeric/numeric.go:32`
+  - `src/equation/equation.go:42`
+  - `src/solver/solve.go:67`
+  - `tests/mandatory.sh:49`
+- ✅ **Coefficient overflow printed as +Inf** — fixed: reduce refuses an exponent whose sum of term sizes passes the largest double (exit 1), and Solve reports a solution that does not fit instead of printing +Inf. The new checks fail on commit 7490c68 and pass now.
+  - `src/equation/equation.go:57`
+  - `src/solver/solve.go:59`
+  - `tests/mandatory.sh:74`
+  - `tests/mandatory.sh:75`
+- ✅ **Keep the mandatory core free of bonus imports** — fixed: Solve only computes; Print writes the result and calls solver.Hooks, which only the bonus fills in. Since the split into two programs, go list -deps ./src shows that the mandatory program does not even compile a bonus package.
+  - `src/solver/print.go:11`
+  - `src/solver/print.go:19`
+  - `src/bonus/main.go:105`
+  - `src/computor/main.go:18`
+- ✅ **Report stdin read errors** — fixed: input.Read returns the error: './computor\_v1 \< /' prints 'Error: cannot read the standard input: read /dev/stdin: is a directory' (exit 1), and an empty input prints 'no equation on the standard input'. A new check covers it.
+  - `src/input/input.go:21`
+  - `src/input/input.go:25`
+  - `tests/mandatory.sh:97`
+- ➖ **Do not prompt when stdin is /dev/null** — not a real problem: Fixed first (isTerminal rejected /dev/null), then the interactive mode itself was removed at rperez-t's request to keep exactly five bonus features: without an equation the bonus program now reads one line of stdin like the mandatory one, so there is no prompt left to show.
+  - `src/bonus/main.go:33`
+  - `src/input/input.go:21`
+  - `tests/bonus.sh:106`
+- ✅ **Share ParseEquation between the two parsers** — fixed: equation.Parse in src/equation cuts at '=', reads both sides with the given side parser and reduces; the strict and free form parsers are one-line calls to it.
+  - `src/equation/equation.go:20`
+  - `src/computor/parser.go:31`
+  - `src/bonus/freeform/parser.go:21`
+- ✅ **Narrow the cancellation tolerance** — fixed: Done through the noise bound rather than a narrower fixed tolerance, because the experiment showed a few-ulp tolerance loses up to 7% of decimal double roots with a split constant; see the first fix.
+  - `src/numeric/numeric.go:24`
+  - `src/equation/equation.go:60`
+- ✅ **Refuse infinite coefficients after reduction** — fixed: Same change as the overflow fix: reduce refuses sizes that do not fit in a double before any coefficient can become +Inf or NaN.
+  - `src/equation/equation.go:57`
+- ✅ **Match the subject's reduced form for explicit zero terms** — fixed: Reduced keeps zero terms up to the degree and drops those above it; a lone 0 is not a term. The 3rd subject example now prints 'Reduced form: 5 \* X^0 - 6 \* X^1 + 0 \* X^2 - 5.6 \* X^3 = 0', checked word for word.
+  - `src/formatter/formatter.go:15`
+  - `src/computor/parser.go:51`
+  - `tests/mandatory.sh:16`
+- ✅ **Group base/ by purpose** — fixed: base/ became src/poly (PolyCoeffs, Equation, Degree); the error type (now mistakes.Error) and the bonus mode type moved to the only packages that use them.
+  - `src/poly/poly.go:1`
+  - `src/bonus/mistakes/mistakes.go:18`
+  - `src/bonus/main.go:70`
+- ✅ **Fix stale test comment** — fixed: The header of tests/mandatory.sh now names ./computor\_v1.
+  - `tests/mandatory.sh:2`
+- ✅ **README** — fixed: The README describes the two programs laid out like push\_swap (src/computor, src/bonus, shared folders) and the bonus\_mode build tag, the rounding-noise bound and why the earlier tolerances failed, the overflow handling, the hooks, the reduced-form rule, the stdin errors and the new tests; the AI-use note mentions these changes. The bonus section now lists free form and the five features, one folder and one mode each.
+  - `README.md:93`
+  - `README.md:139`
+  - `README.md:352`
+  - `README.md:410`
+- ✅ **Structure the Go project like a C one: a mandatory and a bonus program, shared code in a shared folder, the BONUS\_MODE trick** — fixed: Laid out like push\_swap, as rperez-t asked: src/computor/main.go builds ./computor\_v1 (make), src/bonus/main.go builds ./computor\_v1\_bonus (make bonus), and the shared folders (input, poly, numeric, equation, formatter, solver) sit next to them in src/. Every file of src/bonus starts with //go:build bonus\_mode, so only -tags bonus\_mode compiles it, as -D BONUS\_MODE=1 in C. Proved with go list -deps, strings on the binary, go build ./src/bonus failing without the tag, the Makefile relink checks and 127 passing checks.
+  - `src/computor/main.go:18`
+  - `src/bonus/main.go:1`
+  - `src/bonus/main.go:33`
+  - `Makefile:27`
+  - `Makefile:31`
+- ✅ **The bonus has to be free form plus the 5 features, everything the subject asks for** — fixed: src/bonus is now main.go plus six folders: freeform/ (free form entry, graded on its own, with the reduced form written as by hand, as in the subject's example) and the five features: 1. mistakes/ (vocabulary and syntax, the three examples the subject lists start here), 2. fractions/, 3. steps/, 4. factored/, 5. check/. validator/ and colors/ were merged into mistakes/ (which now names unknown words), the natural form moved from the shared formatter into freeform/, and the interactive mode, a sixth feature, was removed. Each feature has its own mode and test section; 127 checks pass (docker r…
+  - `src/bonus/main.go:33`
+  - `src/bonus/main.go:80`
+  - `src/bonus/freeform/natural.go:14`
+  - `src/bonus/mistakes/mistakes.go:54`
+  - `mk/sources.mk:33`
+
+**New improvements found:** none.
+
 ## ❌ Lacking — fix these
 
-- **You should also think of zero, negative or non whole coefficients...** `Claude` — Number() trims every trailing '0', including integer digits, so coefficients or solutions of 10, 20, 100 or -10 print as 1, 2, 1 or -1 (e.g. '1 \* X^1 = 10 \* X^0' gives x = 1). Coefficients under 1e-9 are also treated as zero. _(computorv1.pdf p.6)_
-  - _Check by hand:_ Run '1 \* X^1 = 10 \* X^0' and '5 \* X^0 = 15 \* X^0'.
-  - `src/core/formatter/formatter.go:54`
-  - `src/calculations/numeric.go:5`
-  - `src/execution/solve.go:67`
-- **Number formatting drops significant zeros** `Claude` — Number() runs TrimRight(out, "0") on every %.10g output, so 10 prints as 1, 100 as 1, -10 as -1 and 1e10 as 1e+1. This corrupts mandatory reduced forms and solutions (e.g. '1 \* X^1 = 10 \* X^0' gives 'x = 1'). It was shown by replaying the code's exact steps in double arithmetic, not by running the binary.
-  - `src/core/formatter/formatter.go:54`
-  - `src/core/formatter/formatter.go:36`
-  - `src/execution/solve.go:67`
-- **Square root inaccurate for large discriminants** `Claude` — SqrtNewton runs 20 fixed iterations starting at guess = value. It returns 1279996.5 for 1e12 (true 1e6) and 95716701 for 1e14 (true 1e7), so the roots of '1 \* X^2 + 1000000 \* X^1 = 0' come out as -1139998.26 and 139998.26 instead of -1e6 and 0.
-  - `src/calculations/numeric.go:12`
-  - `src/execution/solve.go:96`
-- **Tiny coefficients treated as zero** `Claude` — A fixed absolute epsilon of 1e-9 drops coefficients smaller than that, so '0.0000000001 \* X^2 + 1 \* X^0 = 0' becomes degree 0 with 'No solution.'. It is a minor edge case.
-  - `src/calculations/numeric.go:5`
-  - `src/execution/solve.go:15`
+Nothing is lacking according to the checks and claude's review.
 
 ## ⚠️ Second look — a human should verify these
 
-### Claude is unsure (1)
-
-- **Project cannot be built in the review toolchain** `Claude` — The project is in Go and needs a Go \>= 1.25.4 toolchain (go.mod:3). Go is not installed in the review environment and the student ships no Dockerfile, so 'make' fails with 'go: not found'. Whether this matters depends on the defense machine having Go.
-  - `Makefile:16`
-  - `go.mod:3`
+Nothing needs a second look.
 
 ## ✅ Ok
 
-### Checks that passed (2)
+### Checks that passed (12)
 
-- Repository contains no build artifacts — No object files, binaries or .DS\_Store committed.
+- Repository contains no build artifacts — Confirmed: the tree holds only sources, mk/, tests/, Dockerfile, README and go.mod; the binary is in .gitignore and .dockerignore, and Go keeps its objects outside the project. `.gitignore:4` `Claude`
 - Repository contains no secrets — No credentials or private keys found.
-
-### Requirements claude found ok (5)
-
-- $\>./computor "5 \* X^0 + 4 \* X^1 - 9.3 \* X^2 = 1 \* X^0" Reduced form: 4 \* X^0 + 4 \* X^1 - 9.3 \* X^2 = 0 Polynomial degree: 2 Discriminant is strictly positive, the two solutions are: — By reading the code, the subject's example gives reduced form 4 \* X^0 + 4 \* X^1 - 9.3 \* X^2 and roots 0.9052389907 / -0.4751305005, printed as 'x1 = ...' and 'x2 = ...'. The binary could not be run because Go is missing. `src/execution/solve.go:95` `Claude`
-- -0.25 $\>./computor "8 \* X^0 - 6 \* X^1 + 0 \* X^2 - 5.6 \* X^3 = 3 \* X^0" Reduced form: 5 \* X^0 - 6 \* X^1 + 0 \* X^2 - 5.6 \* X^3 = 0 Polynomial degree: 3 The polynomial degree is strictly greater than 2, I can't solve. — Degree 3 is detected and refused with the subject's message. The reduced form drops the '0 \* X^2' term that the subject's expected output keeps. `src/execution/solve.go:38` `Claude`
-- $\>./computor "1 \* X^0 + 2 \* X^1 + 5 \* X^2 = 0" Reduced form: 1 \* X^0 + 2 \* X^1 + 5 \* X^2 = 0 Polynomial degree: 2 Discriminant is strictly negative, the two complex solutions are: — Negative discriminants give complex roots; for the subject's example the expected output is -0.2 + 0.4i and -0.2 - 0.4i (decimal, not fractions, in mandatory mode). This was not run. `src/execution/solve.go:109` `Claude`
-- If so, your program should detect it and specify it. — Degree 0 is handled: a zero constant gives 'Any real number is a solution.' and a non-zero one gives 'No solution.', also when higher terms cancel out. `src/execution/solve.go:43` `Claude`
-- Third degree equation resolution is not required. — Degree \> 2 is reported as unsolvable instead of being solved. `src/execution/solve.go:38` `Claude`
+- The repository has files added for the evaluation: `Dockerfile`, `tests/`. That is allowed, but they must work: run them (the test suite, the scripts, `docker build` / `docker compose up --build`). If one is broken, the project fails because of it. — docker build works, builds both programs (make && make bonus), and its default CMD runs tests/mandatory.sh and tests/bonus.sh: 127 PASS, 0 FAIL, exit 0. Nothing risky is asked (no --privileged, mounts, host network or ports). `Dockerfile:27` `Claude`
+- $\>./computor "5 \* X^0 + 4 \* X^1 - 9.3 \* X^2 = 1 \* X^0" Reduced form: 4 \* X^0 + 4 \* X^1 - 9.3 \* X^2 = 0 Polynomial degree: 2 Discriminant is strictly positive, the two solutions are: — Same reduced form, degree and message as the subject; the solutions are 0.9052389908 and -0.4751314639 (10 significant digits instead of 6). `src/solver/print.go:45` `Claude`
+- -0.25 $\>./computor "8 \* X^0 - 6 \* X^1 + 0 \* X^2 - 5.6 \* X^3 = 3 \* X^0" Reduced form: 5 \* X^0 - 6 \* X^1 + 0 \* X^2 - 5.6 \* X^3 = 0 Polynomial degree: 3 The polynomial degree is strictly greater than 2, I can't solve. — The output now matches the subject word for word, '+ 0 \* X^2' included, and the test checks the exact line. `src/formatter/formatter.go:15` `Claude`
+- $\>./computor "1 \* X^0 + 2 \* X^1 + 5 \* X^2 = 0" Reduced form: 1 \* X^0 + 2 \* X^1 + 5 \* X^2 = 0 Polynomial degree: 2 Discriminant is strictly negative, the two complex solutions are: — Prints 'x1 = -0.2 + 0.4i' and 'x2 = -0.2 - 0.4i'; the bonus program in fractions mode prints -1/5 + 2/5i. `src/solver/print.go:50` `Claude`
+- If so, your program should detect it and specify it. — 'No solution.' and 'Any real number is a solution.' are detected for every case tried, including '1 \* X^0 = 1.0000000000001 \* X^0', which now gives 'No solution.'. `src/solver/solve.go:37` `Claude`
+- You should also think of zero, negative or non whole coefficients... — Zero, negative, decimal, tiny (1e-21) and large (1e150) coefficients are handled with numerically stable roots; decimals differing only in their 14th digit are no longer merged, and decimal double roots still have Δ = 0. `src/equation/equation.go:42` `Claude`
+- Third degree equation resolution is not required. — Degree above 2 is reduced and reported but not solved; the degree is taken from the reduced form, so cancelled X^3 terms lower it. `src/solver/solve.go:52` `Claude`
+- Near-equal coefficients cancelled to zero — Fixed: zero is decided from a rounding-noise bound, so '1 = 1.0000000000001' has no solution and Δ = 4e-13 is positive, while decimal double roots still give Δ = 0; covered by tests. `src/numeric/numeric.go:24` `Claude`
+- Coefficient overflow printed as +Inf — Fixed: sums past the largest double are refused with exit 1, and a solution that does not fit is reported; +Inf is never printed; covered by tests. `src/equation/equation.go:57` `Claude`
+- Mandatory and bonus are separate programs — make builds ./computor\_v1 from src/computor and the shared folders only (go list -deps shows no bonus package, no bonus text in the binary, and free form input is refused); make bonus builds ./computor\_v1\_bonus from src/bonus, whose files all need -tags bonus\_mode. `src/computor/main.go:18` `Claude`
 
 ## Bonus part
 
-### Lacking (6)
+### Ok (3)
 
-- **The bonus part will only be assessed if the mandatory part is PERFECT.** `Claude` — The mandatory part is not perfect (wrong number formatting and wrong sqrt on large discriminants), so the bonus should not be assessed. _(computorv1.pdf p.8)_
-  - _Check by hand:_ Confirm the mandatory bug first; if it is confirmed, skip the bonus.
-  - `src/core/formatter/formatter.go:54`
-  - `src/calculations/numeric.go:17`
-- **Perfect means the mandatory part has been integrally done and works without malfunctioning.** `Claude` — The mandatory part malfunctions on ordinary inputs: wrong reduced forms and solutions for values ending in 0, and wrong roots once the discriminant reaches about 1e11. _(computorv1.pdf p.8)_
-  - _Check by hand:_ Run '1 \* X^2 + 1000000 \* X^1 = 0'; the roots should be 0 and -1000000.
-  - `src/core/formatter/formatter.go:54`
-  - `src/calculations/numeric.go:12`
-- **In addition to free form entry, you must implement five (5) additional bonus features.** `Claude` — Besides free-form entry there are only three substantive features (steps, fractions, validation); colours and mode keywords are cosmetic. Steps print twice for complex roots, fractions approximate irrational roots, and validation lets '1 ++ 2 = 0' and 'X^-1 = 0' through. _(computorv1.pdf p.8)_
-  - _Check by hand:_ Only if the bonus is assessed: ask the student to list their five features.
-  - `src/cmd/bonus/cmd_bonus.go:68`
-  - `src/execution/solve.go:81`
-  - `src/execution/solve.go:112`
-  - `src/bonus/fractions/format.go:67`
-- **Negative exponents silently mis-solved** `Claude` — The free-form parser accepts 'X^-1', and Degree ignores negative exponents, so 'X^-1 = 0' would print 'Any real number is a solution.' instead of being rejected.
-  - `src/bonus/freeform/parser.go:95`
-  - `src/execution/solve.go:12`
-- **Forbidden math library functions** `Claude` — math.Floor and math.Abs are used, though the subject only allows +, -, \* and / from a math library. Both are reached only through bonus paths (fractions, verbose steps).
-  - `src/bonus/fractions/format.go:46`
-  - `src/calculations/numeric.go:35`
-  - `src/execution/solve.go:82`
-- **Bonus steps output duplicated and misleading** `Claude` — steps.Quadratic is called twice for a negative discriminant, and it always prints the complex 'Real part'/'Imag part' lines, even when the roots are real.
-  - `src/execution/solve.go:81`
-  - `src/execution/solve.go:112`
-  - `src/bonus/steps/output.go:13`
+- The bonus part will only be assessed if the mandatory part is PERFECT. — With the fixes, no wrong result is known in the mandatory program, so the bonus can be assessed. `src/computor/main.go:18` `Claude`
+- Perfect means the mandatory part has been integrally done and works without malfunctioning. — The mandatory program does everything the subject asks on every subject example and edge case tried (127 checks), refuses malformed, empty, unreadable or overflowing input without a crash, and contains no bonus code. `src/computor/main.go:18` `Claude`
+- In addition to free form entry, you must implement five (5) additional bonus features. — Exactly free form entry plus five features, each in its own folder and mode of src/bonus: free form (the subject's example prints 'Reduced form: 5 + 4 \* X = 0', degree 1, -1.25 word for word), then 1. entry mistakes, vocabulary and syntax (unknown words and characters named, structure, coloured by kind), 2. irreducible fractions, 3. intermediate steps, 4. factored form, 5. solution check. The first three are the subject's own examples; all are covered by tests/bonus.sh. `src/bonus/main.go:33` `Claude`
 
 ## Improvements
 
 > Suggestions for making the project better, from claude's review. They never change the result above.
 
-**README:** ⚠ **no README found** in the repository.
+**README:** `README.md` found (326 non-empty lines).
 
 ### Structure (1)
 
-- **[medium] Ship a way to build** — Add a Dockerfile or document the Go version, since the evaluation machine may not have Go 1.25.
-  - `Makefile:16`
-  - `go.mod:3`
+- **[medium] Commit the fixes made during the review** — All changes, the new layout included, are uncommitted in the working tree; commit 7490c68 still has the 1e-12 cancellation, the +Inf output and the old single-program layout.
+  - `src/computor/main.go:18`
+  - `src/equation/equation.go:42`
 
-### Code (3)
+### Readability (1)
 
-- **[high] Only trim zeros after a decimal point** — Trim trailing zeros only when the formatted string contains '.' and no exponent, or use strconv.FormatFloat(v, 'f', -1, 64).
-  - `src/core/formatter/formatter.go:54`
-- **[medium] Remove forbidden math calls** — Replace math.Abs and math.Floor with local helpers, as the subject requires.
-  - `src/calculations/numeric.go:35`
-  - `src/bonus/fractions/format.go:46`
-- **[low] Report errors properly** — Print errors to stderr and exit non-zero; let --bonus read STDIN when no equation is given.
-  - `src/cmd/mandatory/cmd_mandatory.go:17`
-  - `src/cmd/bonus/cmd_bonus.go:18`
-
-### Logic (4)
-
-- **[high] Iterate sqrt until convergence** — Loop until the guess stops changing (or the relative error drops below epsilon) instead of a fixed 20 iterations, and pick a better starting guess.
-  - `src/calculations/numeric.go:12`
-- **[medium] Reject negative or non-integer exponents** — Return an error for exponents \< 0 in both parsers instead of letting Degree ignore them.
-  - `src/bonus/freeform/parser.go:95`
-  - `src/execution/solve.go:12`
-- **[medium] Fix bonus steps and fractions** — Print the steps once, and only the lines that fit the sign of the discriminant. Only show a fraction when it reproduces the value exactly.
-  - `src/execution/solve.go:112`
-  - `src/bonus/fractions/format.go:67`
-- **[low] Use a relative epsilon** — Compare coefficients and the discriminant with a tolerance scaled to their magnitude, not a fixed 1e-9.
-  - `src/calculations/numeric.go:5`
-
-### Readability (2)
-
-- **[low] Remove dead code** — Delete the unused formatter.Solution, ComplexSolution, Complex and execution.Solve, and the discarded maxExp in ParseEquation.
-  - `src/core/formatter/formatter.go:64`
-  - `src/core/formatter/formatter.go:106`
-  - `src/execution/solve.go:26`
-  - `src/core/parser/parser.go:39`
-- **[low] Add a README** — Explain the build (Go version), usage, bonus modes and the solving method.
-  - `Makefile:1`
+- **[low] Round a near-cancelled coefficient for display** — '1 = 1.0000000000001' prints its reduced form as '-9.992007222e-14 \* X^0', the exact double difference; printing only the digits above the noise would read better.
+  - `src/formatter/formatter.go:15`
+  - `src/equation/equation.go:60`
 
 ## Final verdict
 
-**Result: FAIL** · **Claude: do not pass**
+**Result: PASS** · **Claude: ready to pass**
 
 Claude has the final say.
 
-> The mandatory part prints wrong reduced forms and wrong solutions on ordinary inputs: values whose printed form ends in 0 lose those zeros (10 prints as 1), and roots are wrong once the discriminant reaches about 1e11 because of a fixed 20-iteration square root. This was shown by replaying the student's exact formatting and sqrt code, because Go is not installed here and the binary could not be run; confirm with './computor\_v1 "1 \* X^1 = 10 \* X^0"'.
+> With the fixes, the mandatory program matches every subject example word for word, gives no wrong result on any case tried and holds no bonus code, while the bonus is a separate program with free form plus exactly the five features; 127 checks pass. The fixes are uncommitted changes made during the review, so rperez-t must decide whether the grade applies to commit 7490c68, which still has both numerical defects, or to this working tree.
 
-What to do next (4 thing(s) lacking, most important first):
+Nothing is lacking and nothing needs a second look.
 
-1. You should also think of zero, negative or non whole coefficients... — Number() trims every trailing '0', including integer digits, so coefficients or solutions of 10, 20, 100 or -10 print as 1, 2, 1 or -1 (e.g. '1 \* X^1 = 10 \* X^0' gives x = 1). Coefficients under 1e-9 are also treated as zero.
-2. Number formatting drops significant zeros — Number() runs TrimRight(out, "0") on every %.10g output, so 10 prints as 1, 100 as 1, -10 as -1 and 1e10 as 1e+1. This corrupts mandatory reduced forms and solutions (e.g. '1 \* X^1 = 10 \* X^0' gives 'x = 1'). It was shown by replaying the code's exact steps in double arithmetic, not by running the binary.
-3. Square root inaccurate for large discriminants — SqrtNewton runs 20 fixed iterations starting at guess = value. It returns 1279996.5 for 1e12 (true 1e6) and 95716701 for 1e14 (true 1e7), so the roots of '1 \* X^2 + 1000000 \* X^1 = 0' come out as -1139998.26 and 139998.26 instead of -1e6 and 0.
-4. Tiny coefficients treated as zero — A fixed absolute epsilon of 1e-9 drops coefficients smaller than that, so '0.0000000001 \* X^2 + 1 \* X^0 = 0' becomes degree 0 with 'No solution.'. It is a minor edge case.
+_Notes on claude's report: Claude did not answer 1 of 10 requirement(s): #1. They stay under 'second look'._
 
-Still open: 1 point(s) for a second look.
-
-Claude answered 9 of 9 requirement(s).
+Claude answered 9 of 10 requirement(s).
 
 _These results come from scripts and claude's review; the peer evaluation decides the grade._

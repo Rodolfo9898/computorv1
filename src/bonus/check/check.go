@@ -1,35 +1,44 @@
+//go:build bonus_mode
+
 package check
+
+// Bonus feature 5: each solution put back into the reduced form, P(x) = 0.
 
 import (
 	"fmt"
 
-	"computorv1/src/base"
-	"computorv1/src/calculations"
-	"computorv1/src/core/formatter"
+	"computorv1/src/formatter"
+	"computorv1/src/numeric"
+	"computorv1/src/poly"
+	"computorv1/src/solver"
 )
 
 // relTol: P(x) is zero when it is this small next to the size of its terms. A
 // solution is rounded to a double, so P(x) is rarely exactly 0.
 const relTol = 1e-9
 
-// Real prints P(x), the left side of the reduced form at the solution x: 0 when
-// the solution is right.
-func Real(coeffs base.PolyCoeffs, x float64, useFractions bool) {
-	show(coeffs, x, 0, formatter.SolutionWithOptions(x, useFractions))
+// Show prints P(x), the left side of the reduced form, at each solution: 0 when
+// the solution is right. number writes the solutions.
+func Show(s solver.Solution, number func(float64) string) {
+	switch s.Kind {
+	case solver.OneRoot, solver.DoubleRoot:
+		show(s.Coeffs, s.X1, 0, number(s.X1))
+	case solver.TwoRealRoots:
+		show(s.Coeffs, s.X1, 0, number(s.X1))
+		show(s.Coeffs, s.X2, 0, number(s.X2))
+	case solver.TwoComplexRoots:
+		show(s.Coeffs, s.Re, s.Im, formatter.Complex(s.Re, s.Im, number))
+		show(s.Coeffs, s.Re, -s.Im, formatter.Complex(s.Re, -s.Im, number))
+	}
 }
 
-// Complex prints P(z) for z = re + im * i, worked out in complex numbers.
-func Complex(coeffs base.PolyCoeffs, re, im float64, useFractions bool) {
-	show(coeffs, re, im, formatter.ComplexSolutionWithOptions(re, im, useFractions))
-}
-
-func show(coeffs base.PolyCoeffs, re, im float64, label string) {
+func show(coeffs poly.PolyCoeffs, re, im float64, label string) {
 	pRe, pIm, scale := evaluate(coeffs, re, im)
 	value := "0"
-	if calculations.Abs(pRe) > relTol*scale || calculations.Abs(pIm) > relTol*scale {
+	if numeric.Abs(pRe) > relTol*scale || numeric.Abs(pIm) > relTol*scale {
 		value = formatter.Number(pRe)
 		if im != 0 {
-			value = formatter.ComplexSolutionWithOptions(pRe, pIm, false)
+			value = formatter.Complex(pRe, pIm, formatter.Number)
 		}
 		value += " (not zero)"
 	}
@@ -38,9 +47,9 @@ func show(coeffs base.PolyCoeffs, re, im float64, label string) {
 
 // evaluate gives P(z), the sum of coef * z^exp, and the sum of the sizes of its
 // terms (|coef| * (|re| + |im|)^exp), to which the result is compared.
-func evaluate(coeffs base.PolyCoeffs, re, im float64) (float64, float64, float64) {
+func evaluate(coeffs poly.PolyCoeffs, re, im float64) (float64, float64, float64) {
 	var sumRe, sumIm, scale float64
-	size := calculations.Abs(re) + calculations.Abs(im)
+	size := numeric.Abs(re) + numeric.Abs(im)
 	for exp, coef := range coeffs {
 		if coef == 0 {
 			continue
@@ -52,7 +61,7 @@ func evaluate(coeffs base.PolyCoeffs, re, im float64) (float64, float64, float64
 		}
 		sumRe += coef * powRe
 		sumIm += coef * powIm
-		scale += calculations.Abs(coef) * powSize
+		scale += numeric.Abs(coef) * powSize
 	}
 	return sumRe, sumIm, scale
 }

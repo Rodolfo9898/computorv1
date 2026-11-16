@@ -16,18 +16,21 @@ include mk/sources.mk
 
 all: $(NAME)
 
-# The bonus is in the same program, behind --bonus: nothing more to build.
-bonus: $(NAME)
-	@$(call explain,The bonus is part of $(NAME): run ./$(NAME) --bonus)
+bonus: $(BONUS_NAME)
 
-# go build compiles only the packages that changed (in its own cache, outside
-# the project), so the program is rebuilt only when a source or go.mod changed.
-$(NAME): $(GO_FILES) go.mod
-	@if ! command -v $(GO) >/dev/null; then \
-		printf '$(RED)%s$(RESET)\n' "$(GO) not found: install Go 1.25.4 or later, or use make docker-shell (see the README)"; \
-		exit 1; \
-	fi
-	@$(call run,$(GO) build $(GO_FLAGS) -o $(NAME) $(CMD_DIR))
+# One program per folder, as in push_swap: src/computor for ./computor_v1 and
+# src/bonus for ./computor_v1_bonus, both using the shared folders of src/. The
+# files of src/bonus all start with //go:build bonus_mode: only -tags
+# $(BONUS_TAG), the BONUS_MODE of a C Makefile, compiles them. go build compiles
+# only the packages that changed (in its own cache, outside the project), so a
+# program is rebuilt only when one of its sources or go.mod changed.
+$(NAME): $(MANDATORY_FILES) go.mod
+	@$(call need_go)
+	@$(call run,$(GO) build $(GO_FLAGS) -o $(NAME) $(SRC_DIR)/$(MANDATORY_DIR))
+
+$(BONUS_NAME): $(BONUS_FILES) go.mod
+	@$(call need_go)
+	@$(call run,$(GO) build $(GO_FLAGS) -tags $(BONUS_TAG) -o $(BONUS_NAME) $(SRC_DIR)/$(BONUS_DIR))
 
 # Go keeps no object file in the project: they are in its build cache, shared
 # by every Go project of this machine, which clean leaves alone.
@@ -35,7 +38,7 @@ clean:
 	@$(call warn,nothing to clean: Go keeps its objects in its own build cache)
 
 fclean: clean
-	@$(call remove,$(NAME),Removing the program $(NAME))
+	@$(call remove,$(NAME) $(BONUS_NAME),Removing the programs $(NAME) and $(BONUS_NAME))
 
 re: fclean all
 

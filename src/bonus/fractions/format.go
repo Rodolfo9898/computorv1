@@ -1,9 +1,14 @@
+//go:build bonus_mode
+
 package fractions
+
+// Bonus feature 2: the solutions as irreducible fractions, when relevant.
 
 import (
 	"fmt"
 
-	"computorv1/src/calculations"
+	"computorv1/src/formatter"
+	"computorv1/src/numeric"
 )
 
 const (
@@ -15,6 +20,15 @@ const (
 	// relTol: a fraction is the value when they differ by rounding only.
 	relTol = 1e-13
 )
+
+// Number writes value as an irreducible fraction when it is one, as a decimal
+// otherwise: what the solutions are written with in the fractions mode.
+func Number(value float64) string {
+	if frac, ok := ToFraction(value); ok {
+		return frac
+	}
+	return formatter.Number(value)
+}
 
 // ToFraction gives value as an irreducible fraction, and true, when it is one: -5/4
 // for -1.25. An irrational value (sqrt(2)) has no such fraction and gives false,
@@ -59,7 +73,7 @@ func continuedFraction(x float64) (int, int, bool) {
 		if k2 > maxDen {
 			return 0, 0, false
 		}
-		if calculations.Abs(x-float64(h2)/float64(k2)) <= relTol*x {
+		if numeric.Abs(x-float64(h2)/float64(k2)) <= relTol*x {
 			return h2, k2, true
 		}
 
