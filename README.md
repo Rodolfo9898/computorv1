@@ -435,11 +435,4 @@ can start with a build constraint: every file of `src/bonus/` starts with
 - Go standard library: `strconv`, `regexp`, `fmt`, `bufio` - https://pkg.go.dev/std
 - Docker - https://docs.docker.com/reference/dockerfile/
 
-**Use of AI.** An AI assistant (Claude) reviewed the project against the subject. It
-found the bugs described in *Technical choices* with its tests, and fixed them. It
-also wrote the Dockerfile, the Makefile's `mk/` split, the shell tests and this README,
-and added the natural form, factored form and solution check.
-During the peer evaluation it replaced the 1e-12 cancellation by the rounding-noise
-bound, refused sums past the largest double, moved the bonus behind `solver.Hooks`,
-and split the project into two programs laid out like push_swap (`src/computor`,
-`src/bonus`, and the shared folders of `src/`).
+**Use of AI.** An AI assistant (Claude) reviewed the finished project against the subject, pointed out failures and explained why they did not match the subject, and proposed fixes.
