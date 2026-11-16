@@ -1,7 +1,9 @@
 package bonus
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strings"
 
 	"computorv1/src/base"
@@ -10,34 +12,43 @@ import (
 	"computorv1/src/bonus/validator"
 	"computorv1/src/core/formatter"
 	"computorv1/src/execution"
-	input "computorv1/src/io"
 )
 
+// Run solves the equation of the arguments with the chosen mode. Without an
+// equation it reads them from the standard input, one per line (interactive mode).
 func Run(args []string) {
 	mode, eqArgs := parseBonusArgs(args)
 	if len(eqArgs) == 0 {
-		PrintUsage()
+		interactive(mode)
 		return
 	}
 
-	argument := input.Read(eqArgs)
+	if !solve(mode, strings.Join(eqArgs, " ")) {
+		PrintUsage()
+		os.Exit(1)
+	}
+}
 
+// solve validates, parses and solves one equation; false when it is refused.
+func solve(mode base.BonusMode, equation string) bool {
 	if mode.Validate {
-		if err := validator.ValidateEquation(argument); err != nil {
+		if err := validator.ValidateEquation(equation); err != nil {
 			printValidationError(err)
-			PrintUsage()
-			return
+			return false
 		}
 	}
 
-	coeffs, err := freeform.ParseEquation(argument)
+	coeffs, err := freeform.ParseEquation(equation)
 	if err != nil {
-		fmt.Println(colors.Wrap(colors.Red, fmt.Sprintf("Parse error: %v", err)))
-		PrintUsage()
-		return
+		fmt.Fprintln(os.Stderr, colors.Wrap(colors.Red, fmt.Sprintf("Parse error: %v", err)))
+		return false
 	}
 
-	fmt.Printf("Reduced form: %s = 0\n", formatter.Reduced(coeffs))
+	reduced := formatter.Reduced(coeffs)
+	if mode.Natural {
+		reduced = formatter.Natural(coeffs)
+	}
+	fmt.Printf("Reduced form: %s = 0\n", reduced)
 
 	degree := execution.Degree(coeffs)
 	fmt.Printf("Polynomial degree: %d\n", degree)
@@ -45,78 +56,138 @@ func Run(args []string) {
 	execution.SolveWithOptions(coeffs, degree, base.SolveOptions{
 		Verbose:      mode.ShowSteps,
 		UseFractions: mode.UseFractions,
+		Factored:     mode.Factored,
+		Check:        mode.Check,
 	})
+	return true
+}
+
+// interactive reads one equation per line until the end of the input, or "quit",
+// and solves each one. A terminal gets a prompt; otherwise each equation is
+// written before its result, so that the output reads on its own. The exit status
+// is 1 when an equation was refused.
+func interactive(mode base.BonusMode) {
+	prompt := isTerminal(os.Stdin)
+	if prompt {
+		fmt.Println(colors.Wrap(colors.Grey, "One equation per line; \"quit\" or Ctrl-D to stop."))
+	}
+
+	lines := bufio.NewScanner(os.Stdin)
+	lines.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	refused := false
+	count := 0
+	for {
+		if prompt {
+			fmt.Print("> ")
+		}
+		if !lines.Scan() {
+			break
+		}
+		line := strings.TrimSpace(lines.Text())
+		if line == "" {
+			continue
+		}
+		if line == "quit" || line == "exit" {
+			break
+		}
+		if !prompt {
+			if count > 0 {
+				fmt.Println()
+			}
+			fmt.Printf("Equation: %s\n", line)
+		}
+		count++
+		if !solve(mode, line) {
+			refused = true
+		}
+	}
+	if prompt {
+		fmt.Println()
+	}
+
+	if err := lines.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, colors.Wrap(colors.Red, fmt.Sprintf("Error reading the standard input: %v", err)))
+		os.Exit(1)
+	}
+	if refused {
+		os.Exit(1)
+	}
+}
+
+func isTerminal(file *os.File) bool {
+	info, err := file.Stat()
+	return err == nil && info.Mode()&os.ModeCharDevice != 0
 }
 
 func PrintUsage() {
-	fmt.Println(colors.Wrap(colors.Grey, "\nUsage: ./computor_v1 --bonus [all|steps|fractions|validation|freeform|novalidation] \"<lhs> = <rhs>\""))
-	fmt.Println(colors.Wrap(colors.Grey, " - all: enable all bonus displays (steps + fractions + validation) [default]"))
-	fmt.Println(colors.Wrap(colors.Grey, " - steps: show intermediate solving steps (no fractions, no validation)"))
-	fmt.Println(colors.Wrap(colors.Grey, " - fractions: show solutions as irreducible fractions (no steps, no validation)"))
-	fmt.Println(colors.Wrap(colors.Grey, " - validation: run strict input validation only"))
-	fmt.Println(colors.Wrap(colors.Grey, " - freeform: free-form parsing only (no steps, decimal output, no validation)"))
-	fmt.Println(colors.Wrap(colors.Grey, " - novalidation: skip validation (keep steps/fractions defaults unless altered)"))
-	fmt.Println(colors.Wrap(colors.Grey, " - Accepts free-form terms: 'X', '4 * X', 'X^3', '-5', mixed order"))
-	fmt.Println(colors.Wrap(colors.Grey, "Examples:"))
-	fmt.Println(colors.Wrap(colors.Grey, "  ./computor_v1 --bonus all \"5 + 4 * X + X^2 = X^2\""))
-	fmt.Println(colors.Wrap(colors.Grey, "  ./computor_v1 --bonus steps \"X^2 + X = 0\""))
-	fmt.Println(colors.Wrap(colors.Grey, "  ./computor_v1 --bonus fractions \"7 = 7\""))
-	fmt.Println(colors.Wrap(colors.Grey, "  ./computor_v1 --bonus validation \"@ + X = 0\""))
-	fmt.Println(colors.Wrap(colors.Grey, "  ./computor_v1 --bonus freeform \" 4 = 0\""))
+	lines := []string{
+		"\nUsage: ./computor_v1 --bonus [mode] \"<lhs> = <rhs>\"",
+		"       ./computor_v1 --bonus [mode]          # interactive: one equation per line on stdin",
+		"Modes (free form entry is always on):",
+		" - all: every feature below [default]",
+		" - steps: show the intermediate steps",
+		" - fractions: show solutions as irreducible fractions, when they are exact",
+		" - validation: check the characters and the '=' first, with coloured errors",
+		" - natural: write the reduced form as by hand (5 + 4 * X)",
+		" - factored: write the polynomial as a product of its factors",
+		" - check: put each solution back into the reduced form",
+		" - freeform: free form entry only",
+		" - novalidation: every feature but validation",
+		" - Accepts free-form terms: 'X', '4 * X', '4X', 'X^3', '-5', mixed order",
+		"Examples:",
+		"  ./computor_v1 --bonus \"5 + 4 * X + X^2 = X^2\"",
+		"  ./computor_v1 --bonus steps \"X^2 + X = 0\"",
+		"  ./computor_v1 --bonus fractions \"3 * X = 1\"",
+		"  ./computor_v1 --bonus validation \"@ + X = 0\"",
+		"  ./computor_v1 --bonus factored \"X^2 - 3 * X + 2 = 0\"",
+	}
+	for _, line := range lines {
+		fmt.Fprintln(os.Stderr, colors.Wrap(colors.Grey, line))
+	}
 }
 
 func parseBonusArgs(args []string) (base.BonusMode, []string) {
-	mode := base.BonusMode{ShowSteps: true, UseFractions: true, Validate: true}
+	all := base.BonusMode{ShowSteps: true, UseFractions: true, Validate: true,
+		Natural: true, Factored: true, Check: true}
 	if len(args) == 0 {
-		return mode, args
+		return all, args
 	}
 
-	first := strings.ToLower(args[0])
-	switch first {
+	switch strings.ToLower(args[0]) {
 	case "all":
-		return mode, args[1:]
+		return all, args[1:]
 	case "steps":
-		mode.ShowSteps = true
-		mode.UseFractions = false
-		mode.Validate = false
-		return mode, args[1:]
+		return base.BonusMode{ShowSteps: true}, args[1:]
 	case "fractions", "fraction":
-		mode.ShowSteps = false
-		mode.UseFractions = true
-		mode.Validate = false
-		return mode, args[1:]
+		return base.BonusMode{UseFractions: true}, args[1:]
 	case "validation", "validate":
-		mode.ShowSteps = false
-		mode.UseFractions = false
-		mode.Validate = true
-		return mode, args[1:]
-	case "novalidation", "no-validation":
-		mode.Validate = false
-		return mode, args[1:]
+		return base.BonusMode{Validate: true}, args[1:]
+	case "natural":
+		return base.BonusMode{Natural: true}, args[1:]
+	case "factored", "factor":
+		return base.BonusMode{Factored: true}, args[1:]
+	case "check":
+		return base.BonusMode{Check: true}, args[1:]
 	case "freeform":
-		mode.ShowSteps = false
-		mode.UseFractions = false
-		mode.Validate = false
-		return mode, args[1:]
+		return base.BonusMode{}, args[1:]
+	case "novalidation", "no-validation":
+		all.Validate = false
+		return all, args[1:]
 	default:
 		// treat as equation, keep defaults (all bonuses)
-		return mode, args
+		return all, args
 	}
 }
 
 func printValidationError(err error) {
+	color := colors.Red
 	if ve, ok := err.(base.ValidationError); ok {
 		switch ve.Type {
-		case "syntax":
-			fmt.Println(colors.Wrap(colors.Red, ve.Message))
 		case "chars":
-			fmt.Println(colors.Wrap(colors.Cyan, ve.Message))
+			color = colors.Cyan
 		case "format":
-			fmt.Println(colors.Wrap(colors.Yellow, ve.Message))
-		default:
-			fmt.Println(colors.Wrap(colors.Red, ve.Message))
+			color = colors.Yellow
 		}
-		return
 	}
-	fmt.Println(colors.Wrap(colors.Red, err.Error()))
+	fmt.Fprintln(os.Stderr, colors.Wrap(color, err.Error()))
 }

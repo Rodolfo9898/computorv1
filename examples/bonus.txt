@@ -1,9 +1,0 @@
-# Bonus examples (run with ./build/computor_v1 --bonus "<equation>")
-
-5 + 4 * X + X^2= X^2
-X^2 + X = 0
-4 = 0                     # impossible constant-only equation
-7 = 7                     # infinite solutions
-X = 2 * X                 # linear solution
--3 * X^3 + 2 * X^2 + 1 = 0  # degree > 2 should be refused
-X^4 + X^2 = X^4            # reduces to degree 2, solvable

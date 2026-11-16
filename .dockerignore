@@ -1,0 +1,7 @@
+# Build output and local leftovers stay out of the image: it builds from scratch.
+.git
+build/
+computor_v1
+computorv1
+verdict.md
+verdict-report.md

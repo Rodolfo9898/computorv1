@@ -1,29 +1,59 @@
-BUILD_DIR := build
-BIN := $(BUILD_DIR)/computor_v1
-CMD_DIR := src/cmd
-SRCS := $(shell find src -name '*.go')
-GO ?= go
-RESET := \033[0m
-RED := \033[31m
-GREEN := \033[32m
-YELLOW := \033[33m
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    Makefile                                           :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: rperez-t <rperez-t@student.42belgium.be>   +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2026/11/16 17:00:00 by rperez-t          #+#    #+#              #
+#    Updated: 2026/11/16 17:00:00 by rperez-t         ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
 
-all: $(BIN)
-	@echo "$(GREEN)Target up to date$(RESET)"
+include mk/colors.mk
+include mk/config.mk
+include mk/sources.mk
 
-$(BIN): $(SRCS) go.mod
-	@mkdir -p $(BUILD_DIR)
-	@$(GO) build -o $(BIN) ./$(CMD_DIR) && echo "$(GREEN)Built $(BIN)$(RESET)" || { echo "$(RED)Build failed$(RESET)"; exit 1; }
+all: $(NAME)
 
-clean:
-	@if [ -d "$(BUILD_DIR)" ]; then \
-		rm -rf "$(BUILD_DIR)" && echo "$(GREEN)Removed $(BUILD_DIR)$(RESET)"; \
-	else \
-		echo "$(YELLOW)$(BUILD_DIR) does not exist$(RESET)"; \
+# The bonus is in the same program, behind --bonus: nothing more to build.
+bonus: $(NAME)
+	@$(call explain,The bonus is part of $(NAME): run ./$(NAME) --bonus)
+
+# go build compiles only the packages that changed (in its own cache, outside
+# the project), so the program is rebuilt only when a source or go.mod changed.
+$(NAME): $(GO_FILES) go.mod
+	@if ! command -v $(GO) >/dev/null; then \
+		printf '$(RED)%s$(RESET)\n' "$(GO) not found: install Go 1.25.4 or later, or use make docker-shell (see the README)"; \
+		exit 1; \
 	fi
+	@$(call run,$(GO) build $(GO_FLAGS) -o $(NAME) $(CMD_DIR))
+
+# Go keeps no object file in the project: they are in its build cache, shared
+# by every Go project of this machine, which clean leaves alone.
+clean:
+	@$(call warn,nothing to clean: Go keeps its objects in its own build cache)
 
 fclean: clean
+	@$(call remove,$(NAME),Removing the program $(NAME))
 
 re: fclean all
 
-.PHONY: all clean fclean re
+# Docker: for a machine without Go 1.25. Each rule rebuilds the image first, so
+# it always tests the current sources (docker's cache makes this instant when
+# nothing changed).
+docker-build:
+	docker build -t $(DOCKER_IMAGE) .
+
+# An interactive shell exits with the status of its last command, which says
+# nothing about the rule: only 125, docker itself failing, is an error.
+docker-shell: docker-build
+	@docker run --rm -it $(DOCKER_IMAGE) bash || [ $$? -ne 125 ]
+
+docker-mandatory: docker-build
+	docker run --rm $(DOCKER_IMAGE) bash tests/mandatory.sh
+
+docker-bonus: docker-build
+	docker run --rm $(DOCKER_IMAGE) bash tests/bonus.sh
+
+.PHONY: all bonus clean fclean re docker-build docker-shell docker-mandatory docker-bonus

@@ -10,6 +10,8 @@ type ValidationError struct {
 type SolveOptions struct {
 	Verbose      bool
 	UseFractions bool
+	Factored     bool
+	Check        bool
 }
 
 // BonusMode holds flags that control bonus behaviors.
@@ -17,4 +19,7 @@ type BonusMode struct {
 	ShowSteps    bool
 	UseFractions bool
 	Validate     bool
+	Natural      bool
+	Factored     bool
+	Check        bool
 }

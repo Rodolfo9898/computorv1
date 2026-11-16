@@ -6,22 +6,16 @@ import (
 	"strings"
 
 	"computorv1/src/base"
-	"computorv1/src/core/parser"
+	"computorv1/src/calculations"
 )
 
-// ParseEquation attempts the strict parser first, then falls back to free-form parsing.
+// ParseEquation reads an equation in free form: "5 + 4 * X + X^2 = X^2", "2X = 4",
+// "x^2 - 1 = 0". It also reads the strict form of the mandatory part, which is
+// one of its cases. Every side is a sum of terms: [sign] [number] [*] [X[^n]].
 func ParseEquation(input string) (base.PolyCoeffs, error) {
-	coeffs, err := parser.ParseEquation(input)
-	if err == nil {
-		return coeffs, nil
-	}
-	return parseLoose(input)
-}
-
-func parseLoose(input string) (base.PolyCoeffs, error) {
 	parts := strings.Split(input, "=")
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("equation must contain '='")
+		return nil, fmt.Errorf("equation must contain exactly one '='")
 	}
 
 	left, err := parseSide(parts[0])
@@ -34,84 +28,155 @@ func parseLoose(input string) (base.PolyCoeffs, error) {
 	}
 
 	for exp, coef := range right {
-		left[exp] -= coef
+		left[exp] = calculations.Sum(left[exp], -coef)
 	}
-
 	return left, nil
 }
 
+// scanner walks one side of the equation, byte by byte.
+type scanner struct {
+	text string
+	pos  int
+}
+
+func (s *scanner) skipSpaces() {
+	for s.pos < len(s.text) && (s.text[s.pos] == ' ' || s.text[s.pos] == '\t') {
+		s.pos++
+	}
+}
+
+func (s *scanner) done() bool {
+	s.skipSpaces()
+	return s.pos >= len(s.text)
+}
+
+// peek is the next byte that is not a space, or 0 at the end.
+func (s *scanner) peek() byte {
+	if s.done() {
+		return 0
+	}
+	return s.text[s.pos]
+}
+
+// near shows where a mistake is: the rest of the side from there.
+func (s *scanner) near() string {
+	if s.done() {
+		return "the end of the side"
+	}
+	return fmt.Sprintf("%q", strings.TrimSpace(s.text[s.pos:]))
+}
+
+// digits reads [0-9]+ and returns them, or "" when there are none.
+func (s *scanner) digits() string {
+	start := s.pos
+	for s.pos < len(s.text) && s.text[s.pos] >= '0' && s.text[s.pos] <= '9' {
+		s.pos++
+	}
+	return s.text[start:s.pos]
+}
+
 func parseSide(expr string) (base.PolyCoeffs, error) {
+	s := &scanner{text: expr}
+	if s.done() {
+		return nil, fmt.Errorf("a side of the equation is empty")
+	}
+
 	coeffs := make(base.PolyCoeffs)
-	for _, token := range splitTerms(expr) {
-		if token == "" {
-			continue
+	for first := true; !s.done(); first = false {
+		sign := 1.0
+		switch s.peek() {
+		case '+':
+			s.pos++
+		case '-':
+			sign = -1
+			s.pos++
+		default:
+			if !first {
+				return nil, fmt.Errorf("missing '+' or '-' before %s", s.near())
+			}
 		}
-		coef, exp, err := parseTerm(token)
+
+		coef, exp, err := parseTerm(s)
 		if err != nil {
 			return nil, err
 		}
-		coeffs[exp] += coef
+		coeffs[exp] = calculations.Sum(coeffs[exp], sign*coef)
 	}
 	return coeffs, nil
 }
 
-func splitTerms(expr string) []string {
-	trimmed := strings.ReplaceAll(expr, " ", "")
-	var terms []string
-	start := 0
-	for i := 1; i < len(trimmed); i++ {
-		if (trimmed[i] == '+' || trimmed[i] == '-') && trimmed[i-1] != '^' {
-			terms = append(terms, trimmed[start:i])
-			start = i
+// parseTerm reads a term after its sign: "4", "4 * X", "4X", "X^2", "2.5 * x^3".
+func parseTerm(s *scanner) (float64, int, error) {
+	coef, hasCoef, err := parseNumber(s)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if s.peek() == '*' {
+		if !hasCoef {
+			return 0, 0, fmt.Errorf("'*' with no number before it, near %s", s.near())
+		}
+		s.pos++
+		if c := s.peek(); c != 'X' && c != 'x' {
+			return 0, 0, fmt.Errorf("expected X after '*', near %s", s.near())
 		}
 	}
-	terms = append(terms, trimmed[start:])
-	return terms
+
+	if c := s.peek(); c != 'X' && c != 'x' {
+		if !hasCoef {
+			return 0, 0, fmt.Errorf("expected a number or X, near %s", s.near())
+		}
+		return coef, 0, nil
+	}
+	s.pos++
+
+	exp := 1
+	if s.peek() == '^' {
+		s.pos++
+		s.skipSpaces()
+		if s.pos < len(s.text) && s.text[s.pos] == '-' {
+			return 0, 0, fmt.Errorf("negative exponent near %s: a polynomial has none", s.near())
+		}
+		digits := s.digits()
+		if digits == "" {
+			return 0, 0, fmt.Errorf("missing exponent after '^', near %s", s.near())
+		}
+		if s.pos < len(s.text) && s.text[s.pos] == '.' {
+			return 0, 0, fmt.Errorf("the exponent %s... must be a whole number", digits)
+		}
+		exp, err = strconv.Atoi(digits)
+		if err != nil {
+			return 0, 0, fmt.Errorf("exponent %s is too large", digits)
+		}
+	}
+	return coef, exp, nil
 }
 
-func parseTerm(term string) (float64, int, error) {
-	term = strings.TrimSpace(term)
-	if term == "" {
-		return 0, 0, fmt.Errorf("empty term")
-	}
-
-	xIndex := strings.IndexAny(term, "Xx")
-	if xIndex == -1 {
-		value, err := strconv.ParseFloat(term, 64)
-		if err != nil {
-			return 0, 0, fmt.Errorf("invalid constant term %q", term)
+// parseNumber reads digits[.digits], if there is a number there; the coefficient
+// of a term without one is 1.
+func parseNumber(s *scanner) (float64, bool, error) {
+	s.skipSpaces()
+	whole := s.digits()
+	if whole == "" {
+		if s.pos < len(s.text) && s.text[s.pos] == '.' {
+			return 0, false, fmt.Errorf("a number must start with a digit, near %s", s.near())
 		}
-		return value, 0, nil
+		return 1, false, nil
 	}
 
-	coefStr := strings.TrimSuffix(term[:xIndex], "*")
-	exp := 1
-	if len(term) > xIndex+1 {
-		if term[xIndex+1] == '^' {
-			expPart := term[xIndex+2:]
-			if expPart == "" {
-				return 0, 0, fmt.Errorf("missing exponent in term %q", term)
-			}
-			expVal, err := strconv.Atoi(expPart)
-			if err != nil {
-				return 0, 0, fmt.Errorf("invalid exponent in term %q", term)
-			}
-			exp = expVal
-		} else {
-			return 0, 0, fmt.Errorf("invalid syntax near %q", term)
+	text := whole
+	if s.pos < len(s.text) && s.text[s.pos] == '.' {
+		s.pos++
+		decimals := s.digits()
+		if decimals == "" {
+			return 0, false, fmt.Errorf("missing digits after '%s.'", whole)
 		}
+		text += "." + decimals
 	}
 
-	coef := 1.0
-	if coefStr == "-" {
-		coef = -1
-	} else if coefStr != "" && coefStr != "+" {
-		val, err := strconv.ParseFloat(coefStr, 64)
-		if err != nil {
-			return 0, 0, fmt.Errorf("invalid coefficient in term %q", term)
-		}
-		coef = val
+	value, err := strconv.ParseFloat(text, 64)
+	if err != nil {
+		return 0, false, fmt.Errorf("number %s is too large", text)
 	}
-
-	return coef, exp, nil
+	return value, true, nil
 }
