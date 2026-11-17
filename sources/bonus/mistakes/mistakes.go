@@ -2,23 +2,16 @@
 
 package mistakes
 
-import (
-	"fmt"
-	"strings"
-	"unicode"
-)
-
 // Bonus feature 1, entry mistakes (vocabulary and syntax). Check reads the
 // equation before the parser: the vocabulary (only numbers, X, + - * ^ = and
 // spaces), one '=' and two sides that are not empty. The syntax mistakes the
 // free form parser finds (1 ++ 2, X^, 2 * 3 * X...) are reported by Print too.
 
-// Error is a refused equation; Kind ("vocabulary" or "structure") chooses the
-// colour it is printed in.
-type Error struct {
-	Kind    string
-	Message string
-}
+import (
+	"fmt"
+	"strings"
+	"unicode"
+)
 
 func (e Error) Error() string {
 	return e.Message

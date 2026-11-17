@@ -13,10 +13,6 @@ import (
 	"computorv1/sources/solver"
 )
 
-// relTol: P(x) is zero when it is this small next to the size of its terms. A
-// solution is rounded to a double, so P(x) is rarely exactly 0.
-const relTol = 1e-9
-
 // Show prints P(x), the left side of the reduced form, at each solution: 0 when
 // the solution is right. number writes the solutions.
 func Show(s solver.Solution, number func(float64) string) {

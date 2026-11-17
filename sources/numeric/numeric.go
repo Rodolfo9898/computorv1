@@ -1,9 +1,5 @@
 package numeric
 
-// Unit is the unit roundoff of a double: a rounded result is within Unit times
-// its size of the exact one.
-const Unit = 0x1p-53
-
 // Abs returns |value|: the subject forbids the math library beyond + - * /.
 func Abs(value float64) float64 {
 	if value < 0 {

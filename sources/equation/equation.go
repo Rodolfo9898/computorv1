@@ -8,12 +8,6 @@ import (
 	"computorv1/sources/poly"
 )
 
-// Term is one term of a side, as it was read: "4 * X^1" is {Exp: 1, Coef: 4}.
-type Term struct {
-	Exp  int
-	Coef float64
-}
-
 // Parse cuts input at its '=', reads both sides with side, then moves every
 // term to the left: the equation reduced to P(X) = 0. Both programs use it, each
 // with its own side parser: strict in the mandatory one, free form in the bonus.

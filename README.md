@@ -319,8 +319,11 @@ sources/
   computor/            ./computor_v1 (make): never imports sources/bonus
     main.go            main(): --help, read, parse, print the reduced form and degree, solve
     parser.go          the strict parser: a regular expression per term
+    constants.go       its regular expressions
   bonus/               ./computor_v1_bonus (make bonus): every file is //go:build bonus_mode
-    main.go            main(): the modes, their hooks into the solver
+    main.go            main(): --help, read, parse, solve; the refusals and the usage
+    mode.go            the modes, their hooks into the solver
+    types.go           the mode type
     freeform/          free form entry (graded on its own): the parser, the natural form
     mistakes/          1. entry mistakes: vocabulary, structure, and their colours
     fractions/         2. a float as an exact fraction, by continued fractions
@@ -333,13 +336,20 @@ sources/
   equation/            shared: the reduction both parsers use: terms moved left, noise cleared
   formatter/           shared: the reduced form, numbers, complex numbers
   solver/              shared:
-    solve.go           the case and the solutions for degree 0, 1 or 2, printing nothing
-    print.go           writes them as in the subject, with the hooks the bonus fills in
+    types.go           the case, the solution, the hooks the bonus fills in
+    constants.go       the cases: no solution, degree 1, Δ > 0, ...
+    solve.go           the solutions for degree 0, 1 or 2 (printing nothing), then Print,
+                       which writes them as in the subject
 tests/
   setup.sh             shared helpers: run, compare, PASS / FAIL
   mandatory.sh         the mandatory checks
   bonus.sh             the bonus checks
 ```
+
+Inside a package, the files follow the same rules everywhere: `constants.go` holds
+the package's constants (and the compiled regular expressions, which Go cannot declare
+`const`), `types.go` its type declarations, and every other file at most 5 functions
+(methods included), grouped by what they do.
 
 ## Technical choices
 

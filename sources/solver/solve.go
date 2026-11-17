@@ -1,37 +1,12 @@
 package solver
 
 import (
+	"fmt"
+
+	"computorv1/sources/formatter"
 	"computorv1/sources/numeric"
 	"computorv1/sources/poly"
 )
-
-// Kind is the case an equation falls in.
-type Kind int
-
-const (
-	AnyReal         Kind = iota // every term cancelled out: 0 = 0
-	NoSolution                  // a constant that is not zero: c = 0
-	DegreeTooHigh               // degree 3 or more: not solved
-	DeltaTooLarge               // b² or 4ac does not fit in a double
-	RootTooLarge                // a solution does not fit in a double
-	OneRoot                     // degree 1
-	DoubleRoot                  // degree 2, Δ = 0
-	TwoRealRoots                // degree 2, Δ > 0
-	TwoComplexRoots             // degree 2, Δ < 0
-)
-
-// Solution is what Solve found. Solve prints nothing: Print writes it, and the
-// bonus adds its own lines through Hooks, so that the mandatory part does not
-// depend on the bonus.
-type Solution struct {
-	Kind      Kind
-	Coeffs    poly.PolyCoeffs
-	A, B, C   float64 // the coefficients of X^2, X^1 and X^0
-	Delta     float64 // b² - 4ac, exactly 0 when it is within rounding noise
-	SqrtDelta float64 // √|Δ|
-	X1, X2    float64 // the real solutions (X1 alone for OneRoot and DoubleRoot)
-	Re, Im    float64 // the complex solutions are Re + Im i and Re - Im i
-}
 
 // Solve finds the solutions of a reduced equation of degree 2 or less.
 func Solve(eq poly.Equation) Solution {
@@ -98,4 +73,51 @@ func realRoots(a, b, c, sqrtDisc float64) (float64, float64) {
 	}
 	q := (sqrtDisc - b) / 2
 	return c / q, q / a
+}
+
+// Print writes the case of the solution and its solutions, as in the subject.
+func Print(s Solution, hooks Hooks) {
+	number := hooks.Number
+	if number == nil {
+		number = formatter.Number
+	}
+
+	call(hooks.BeforeCase, s)
+	switch s.Kind {
+	case AnyReal:
+		fmt.Println("Any real number is a solution.")
+	case NoSolution:
+		fmt.Println("No solution.")
+	case DegreeTooHigh:
+		fmt.Println("The polynomial degree is strictly greater than 2, I can't solve.")
+	case DeltaTooLarge:
+		fmt.Println("The coefficients are too large: the discriminant does not fit in a double.")
+	case RootTooLarge:
+		fmt.Println("The coefficients are too far apart: a solution does not fit in a double.")
+	case OneRoot:
+		fmt.Println("The solution is:")
+		call(hooks.AfterCase, s)
+		fmt.Printf("x = %s\n", number(s.X1))
+	case DoubleRoot:
+		fmt.Println("Discriminant is zero, the solution is:")
+		call(hooks.AfterCase, s)
+		fmt.Printf("x = %s\n", number(s.X1))
+	case TwoRealRoots:
+		fmt.Println("Discriminant is strictly positive, the two solutions are:")
+		call(hooks.AfterCase, s)
+		fmt.Printf("x1 = %s\n", number(s.X1))
+		fmt.Printf("x2 = %s\n", number(s.X2))
+	case TwoComplexRoots:
+		fmt.Println("Discriminant is strictly negative, the two complex solutions are:")
+		call(hooks.AfterCase, s)
+		fmt.Printf("x1 = %s\n", formatter.Complex(s.Re, s.Im, number))
+		fmt.Printf("x2 = %s\n", formatter.Complex(s.Re, -s.Im, number))
+	}
+	call(hooks.AfterSolutions, s)
+}
+
+func call(hook func(Solution), s Solution) {
+	if hook != nil {
+		hook(s)
+	}
 }
