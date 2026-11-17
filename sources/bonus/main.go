@@ -8,18 +8,18 @@ import (
 	"os"
 	"strings"
 
-	"computorv1/src/bonus/check"
-	"computorv1/src/bonus/factored"
-	"computorv1/src/bonus/fractions"
-	"computorv1/src/bonus/freeform"
-	"computorv1/src/bonus/mistakes"
-	"computorv1/src/bonus/steps"
-	"computorv1/src/formatter"
-	"computorv1/src/input"
-	"computorv1/src/solver"
+	"computorv1/sources/bonus/check"
+	"computorv1/sources/bonus/factored"
+	"computorv1/sources/bonus/fractions"
+	"computorv1/sources/bonus/freeform"
+	"computorv1/sources/bonus/mistakes"
+	"computorv1/sources/bonus/steps"
+	"computorv1/sources/formatter"
+	"computorv1/sources/input"
+	"computorv1/sources/solver"
 )
 
-// ./computor_v1_bonus, the bonus program (make bonus): every file of src/bonus
+// ./computor_v1_bonus, the bonus program (make bonus): every file of sources/bonus
 // starts with //go:build bonus_mode, the BONUS_MODE of a C Makefile, so only
 // go build -tags bonus_mode compiles them. As in the subject (p.8): free form
 // entry, always on and graded on its own (freeform/), then five additional

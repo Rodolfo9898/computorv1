@@ -1,8 +1,8 @@
 package solver
 
 import (
-	"computorv1/src/numeric"
-	"computorv1/src/poly"
+	"computorv1/sources/numeric"
+	"computorv1/sources/poly"
 )
 
 // Kind is the case an equation falls in.

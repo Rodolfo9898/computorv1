@@ -22,9 +22,9 @@ never imports Go's `math` package.
 | Bonus | `./computor_v1_bonus [mode]` | The same, with the equation read on the standard input |
 
 Two programs, laid out like push_swap: `make` builds `./computor_v1` from
-`src/computor/`, the mandatory part, and `make bonus` builds `./computor_v1_bonus` from
-`src/bonus/`. Each folder has its own `main.go`, and both use the shared folders of
-`src/`. Every file of `src/bonus/` starts with `//go:build bonus_mode`, the Go form of
+`sources/computor/`, the mandatory part, and `make bonus` builds `./computor_v1_bonus` from
+`sources/bonus/`. Each folder has its own `main.go`, and both use the shared folders of
+`sources/`. Every file of `sources/bonus/` starts with `//go:build bonus_mode`, the Go form of
 `#if BONUS_MODE`: only `make bonus` (`-tags bonus_mode`) compiles them (see
 *Technical choices*).
 
@@ -46,8 +46,8 @@ make
 
 | Rule | Effect |
 |---|---|
-| `all`, `computor_v1` | Build `./computor_v1`, the mandatory program, from `src/computor` and the shared folders; again only when one of them or `go.mod` changed |
-| `bonus`, `computor_v1_bonus` | Build `./computor_v1_bonus` with `-tags bonus_mode`, from `src/bonus` and the shared folders |
+| `all`, `computor_v1` | Build `./computor_v1`, the mandatory program, from `sources/computor` and the shared folders; again only when one of them or `go.mod` changed |
+| `bonus`, `computor_v1_bonus` | Build `./computor_v1_bonus` with `-tags bonus_mode`, from `sources/bonus` and the shared folders |
 | `clean` | Nothing to remove: Go keeps its objects in its own build cache, outside the project |
 | `fclean` | `clean`, and remove `./computor_v1` and `./computor_v1_bonus` |
 | `re` | `fclean`, then `all` |
@@ -146,16 +146,16 @@ make bonus
 
 As the subject asks (p.8): free form entry, graded on its own, then five additional
 features. Free form entry is on in every mode, and each feature is a folder of
-`src/bonus/` and a mode that turns it on alone; `all`, the default, turns all five on.
+`sources/bonus/` and a mode that turns it on alone; `all`, the default, turns all five on.
 
 | Mode | Feature | Folder |
 |---|---|---|
-| `freeform` | Free form entry only (graded on its own) | `src/bonus/freeform/` |
-| `mistakes` | 1. Entry mistakes: vocabulary and syntax | `src/bonus/mistakes/` |
-| `fractions` | 2. Solutions as irreducible fractions | `src/bonus/fractions/` |
-| `steps` | 3. Intermediate calculation steps | `src/bonus/steps/` |
-| `factored` | 4. Factored form | `src/bonus/factored/` |
-| `check` | 5. Solution check, P(x) = 0 | `src/bonus/check/` |
+| `freeform` | Free form entry only (graded on its own) | `sources/bonus/freeform/` |
+| `mistakes` | 1. Entry mistakes: vocabulary and syntax | `sources/bonus/mistakes/` |
+| `fractions` | 2. Solutions as irreducible fractions | `sources/bonus/fractions/` |
+| `steps` | 3. Intermediate calculation steps | `sources/bonus/steps/` |
+| `factored` | 4. Factored form | `sources/bonus/factored/` |
+| `check` | 5. Solution check, P(x) = 0 | `sources/bonus/check/` |
 | `all` (when no mode is given) | the five features at once | |
 
 The first three are the subject's own examples; the factored form and the check are
@@ -298,7 +298,7 @@ make docker-build && docker run --rm computorv1-test    # mandatory, then bonus
 Each rule rebuilds the image first, so it always tests the current sources.
 `make docker-mandatory` and `make docker-bonus` fail if any check fails. In
 `make docker-shell` the programs are `./computor_v1` and `./computor_v1_bonus`, as on
-your machine, and `go` is there too: `gofmt -l src`, `go vet ./...` and
+your machine, and `go` is there too: `gofmt -l sources`, `go vet ./...` and
 `go vet -tags bonus_mode ./...` print nothing.
 
 ## Project structure
@@ -315,8 +315,8 @@ mk/                    everything the Makefile includes
                          on its own, so changing the bonus never rebuilds ./computor_v1
 Dockerfile             the test image (see Testing on Linux with Docker)
 go.mod                 module computorv1, Go 1.25.4
-src/
-  computor/            ./computor_v1 (make): never imports src/bonus
+sources/
+  computor/            ./computor_v1 (make): never imports sources/bonus
     main.go            main(): --help, read, parse, print the reduced form and degree, solve
     parser.go          the strict parser: a regular expression per term
   bonus/               ./computor_v1_bonus (make bonus): every file is //go:build bonus_mode
@@ -344,7 +344,7 @@ tests/
 ## Technical choices
 
 **The equation becomes a map from exponent to coefficient** (`poly.PolyCoeffs`). Each
-side is parsed into a list of terms, and `equation.Parse` (`src/equation`), shared by both parsers,
+side is parsed into a list of terms, and `equation.Parse` (`sources/equation`), shared by both parsers,
 adds them up by exponent, those of the right side subtracted. The reduced form is this
 map sorted by exponent, and the degree is the highest exponent whose coefficient is
 not zero, so terms that cancel lower the degree.
@@ -386,11 +386,11 @@ decimals and only those. The first version also trimmed every `0` at the end, so
 became `1`.
 
 **Strict parsing cuts each side before every sign**, except the sign of an exponent.
-Each piece must then match `a * X^p` or be a constant (`src/computor/parser.go`).
+Each piece must then match `a * X^p` or be a constant (`sources/computor/parser.go`).
 A sign that follows another one is a piece of its own that matches nothing, which is
 how `1 ++ 2` is refused.
 
-**Free form parsing is a scanner** (`src/bonus/freeform/parser.go`): it reads a sign,
+**Free form parsing is a scanner** (`sources/bonus/freeform/parser.go`): it reads a sign,
 a number, a `*`, an `X`, a `^` and its digits, and says what it expected where it
 stops. The first version cut on the signs and guessed, and accepted `1 2` as 12 and
 `X^-1`.
@@ -404,7 +404,7 @@ walked until a convergent equals it up to rounding (1e-13), with a denominator o
 (`solver.Hooks`) at three places: before the line that names the case, after it,
 and after the solutions, plus the function that writes a number. The mandatory part
 passes no hook. The bonus fills them in from its mode: the steps, the factored form,
-the check, and fractions for the numbers. No file outside `src/bonus` imports
+the check, and fractions for the numbers. No file outside `sources/bonus` imports
 one of its packages.
 
 **Two programs, as in push_swap, and the BONUS_MODE trick with a Go build tag.**
@@ -412,13 +412,13 @@ push_swap has one folder per program, each with its `main.c` (`push_swap/`, and
 `bonus/` for the checker), next to the folders both share; its bonus files are
 wrapped in `#if BONUS_MODE`, and `make bonus` compiles them with `-D BONUS_MODE=1`.
 Go has one package per folder, and a folder whose files say `package main` is a
-program: `src/computor/main.go` and `src/bonus/main.go` are two of them, both named
+program: `sources/computor/main.go` and `sources/bonus/main.go` are two of them, both named
 `main.go` since they are in different folders. Go has no preprocessor, but a file
-can start with a build constraint: every file of `src/bonus/` starts with
-`//go:build bonus_mode`, so `go build ./src/bonus` refuses to build without the tag
+can start with a build constraint: every file of `sources/bonus/` starts with
+`//go:build bonus_mode`, so `go build ./sources/bonus` refuses to build without the tag
 ("build constraints exclude all Go files"), and `make bonus` builds it with
 `-tags bonus_mode`. The mandatory program holds no bonus code: `go list -deps
-./src/computor` lists only `src/computor` and the shared folders, and
+./sources/computor` lists only `sources/computor` and the shared folders, and
 `tests/mandatory.sh` checks that no bonus text is in its binary.
 
 ## Resources

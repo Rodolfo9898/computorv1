@@ -5,8 +5,8 @@ package freeform
 import (
 	"fmt"
 
-	"computorv1/src/formatter"
-	"computorv1/src/poly"
+	"computorv1/sources/formatter"
+	"computorv1/sources/poly"
 )
 
 // Natural builds the reduced form as it is written by hand, as in the subject's

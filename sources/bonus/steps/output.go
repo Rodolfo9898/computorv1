@@ -7,8 +7,8 @@ package steps
 import (
 	"fmt"
 
-	"computorv1/src/formatter"
-	"computorv1/src/solver"
+	"computorv1/sources/formatter"
+	"computorv1/sources/solver"
 )
 
 // BeforeCase shows how the case is found: the formula of degree 1, or Δ worked

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"computorv1/src/numeric"
-	"computorv1/src/poly"
+	"computorv1/sources/numeric"
+	"computorv1/sources/poly"
 )
 
 // Term is one term of a side, as it was read: "4 * X^1" is {Exp: 1, Coef: 4}.

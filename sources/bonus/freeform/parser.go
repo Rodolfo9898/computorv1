@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"computorv1/src/equation"
-	"computorv1/src/poly"
+	"computorv1/sources/equation"
+	"computorv1/sources/poly"
 )
 
 // ParseEquation reads an equation in free form: "5 + 4 * X + X^2 = X^2", "2X = 4",

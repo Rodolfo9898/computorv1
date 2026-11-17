@@ -7,10 +7,10 @@ package check
 import (
 	"fmt"
 
-	"computorv1/src/formatter"
-	"computorv1/src/numeric"
-	"computorv1/src/poly"
-	"computorv1/src/solver"
+	"computorv1/sources/formatter"
+	"computorv1/sources/numeric"
+	"computorv1/sources/poly"
+	"computorv1/sources/solver"
 )
 
 // relTol: P(x) is zero when it is this small next to the size of its terms. A

@@ -7,8 +7,8 @@ package factored
 import (
 	"fmt"
 
-	"computorv1/src/formatter"
-	"computorv1/src/solver"
+	"computorv1/sources/formatter"
+	"computorv1/sources/solver"
 )
 
 // Show prints the polynomial as a product of its factors, when it has solutions;

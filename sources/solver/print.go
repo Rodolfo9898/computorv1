@@ -3,7 +3,7 @@ package solver
 import (
 	"fmt"
 
-	"computorv1/src/formatter"
+	"computorv1/sources/formatter"
 )
 
 // Hooks are what the bonus adds to the output of Print; the mandatory part

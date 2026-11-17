@@ -5,15 +5,15 @@ import (
 	"io"
 	"os"
 
-	"computorv1/src/formatter"
-	"computorv1/src/input"
-	"computorv1/src/solver"
+	"computorv1/sources/formatter"
+	"computorv1/sources/input"
+	"computorv1/sources/solver"
 )
 
 // ./computor_v1, the mandatory program (make): solves the equation of the
 // arguments, or of the standard input when there are none. It uses the shared
-// folders of src/ (input, poly, numeric, equation, formatter, solver) and never
-// src/bonus, which make does not even compile. A refused equation exits with
+// folders of sources/ (input, poly, numeric, equation, formatter, solver) and never
+// sources/bonus, which make does not even compile. A refused equation exits with
 // status 1, its reason on stderr.
 func main() {
 	args := os.Args[1:]

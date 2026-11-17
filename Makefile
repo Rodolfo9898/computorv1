@@ -18,9 +18,9 @@ all: $(NAME)
 
 bonus: $(BONUS_NAME)
 
-# One program per folder, as in push_swap: src/computor for ./computor_v1 and
-# src/bonus for ./computor_v1_bonus, both using the shared folders of src/. The
-# files of src/bonus all start with //go:build bonus_mode: only -tags
+# One program per folder, as in push_swap: sources/computor for ./computor_v1 and
+# sources/bonus for ./computor_v1_bonus, both using the shared folders of sources/. The
+# files of sources/bonus all start with //go:build bonus_mode: only -tags
 # $(BONUS_TAG), the BONUS_MODE of a C Makefile, compiles them. go build compiles
 # only the packages that changed (in its own cache, outside the project), so a
 # program is rebuilt only when one of its sources or go.mod changed.

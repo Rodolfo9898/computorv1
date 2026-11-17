@@ -17,7 +17,7 @@ BONUS_NAME = computor_v1_bonus
 GO = go
 GO_FLAGS = -trimpath
 
-SRC_DIR = ./src
-# The tag the files of src/bonus need to be compiled, as -D BONUS_MODE=1 in C.
+SRC_DIR = ./sources
+# The tag the files of sources/bonus need to be compiled, as -D BONUS_MODE=1 in C.
 BONUS_TAG = bonus_mode
 DOCKER_IMAGE = computorv1-test

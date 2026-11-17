@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"computorv1/src/equation"
-	"computorv1/src/poly"
+	"computorv1/sources/equation"
+	"computorv1/sources/poly"
 )
 
 // termPattern matches polynomial terms in the form: coefficient * x ^ exponent (e.g., "3 * x ^ 2")

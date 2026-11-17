@@ -7,8 +7,8 @@ package fractions
 import (
 	"fmt"
 
-	"computorv1/src/formatter"
-	"computorv1/src/numeric"
+	"computorv1/sources/formatter"
+	"computorv1/sources/numeric"
 )
 
 const (

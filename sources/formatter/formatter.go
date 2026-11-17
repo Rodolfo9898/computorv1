@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"computorv1/src/poly"
+	"computorv1/sources/poly"
 )
 
 // Reduced builds the reduced form of the subject: every term as a * X^p. A zero
