@@ -10,12 +10,14 @@ import (
 )
 
 // Natural builds the reduced form as it is written by hand, as in the subject's
-// free form example: "5 + 4 * X", "X^2 - X", "-X". Zero terms are left out.
-func Natural(coeffs poly.PolyCoeffs) string {
+// free form example: "5 + 4 * X", "X^2 - X", "-X". Zero terms are left out, and
+// each coefficient is written with the digits it needs (formatter.Coefficient).
+func Natural(eq poly.Equation) string {
 	keep := func(coef float64, exp int) bool { return coef != 0 }
-	return formatter.Join(coeffs, keep, func(coef float64, exp int) string {
+	return formatter.Join(eq.Coeffs, keep, func(coef float64, exp int) string {
+		number := formatter.Coefficient(coef, eq.Noise[exp])
 		if exp == 0 {
-			return formatter.Number(coef)
+			return number
 		}
 		x := "X"
 		if exp > 1 {
@@ -24,6 +26,6 @@ func Natural(coeffs poly.PolyCoeffs) string {
 		if coef == 1 {
 			return x
 		}
-		return formatter.Number(coef) + " * " + x
+		return number + " * " + x
 	}, "0")
 }

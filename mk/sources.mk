@@ -20,9 +20,9 @@ BONUS_DIR = bonus
 # arithmetic, the reduction of the parsed terms, the printing and the solver.
 SHARED_SRCS = input/input.go \
 			poly/poly.go poly/types.go \
-			numeric/constants.go numeric/numeric.go \
+			numeric/constants.go numeric/numeric.go numeric/scale.go \
 			equation/equation.go equation/types.go \
-			formatter/formatter.go \
+			formatter/coefficient.go formatter/formatter.go \
 			solver/constants.go solver/solve.go solver/types.go
 
 # ./computor_v1: its main() and the strict parser.

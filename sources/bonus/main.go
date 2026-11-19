@@ -55,7 +55,7 @@ func main() {
 		refuse(fmt.Errorf("Parse error: %v", err), report)
 	}
 
-	fmt.Printf("Reduced form: %s = 0\n", freeform.Natural(eq.Coeffs))
+	fmt.Printf("Reduced form: %s = 0\n", freeform.Natural(eq))
 	fmt.Printf("Polynomial degree: %d\n", eq.Coeffs.Degree())
 	solver.Print(solver.Solve(eq), m.hooks())
 }
@@ -65,11 +65,11 @@ func plain(w io.Writer, err error) {
 	fmt.Fprintln(w, err)
 }
 
-// refuse reports why the equation is refused, then the usage, and exits with 1.
+// refuse reports why the equation is refused, then where the usage is, and exits
+// with 1: the whole usage would bury the reason under fifteen lines.
 func refuse(err error, report func(io.Writer, error)) {
 	report(os.Stderr, err)
-	fmt.Fprintln(os.Stderr)
-	printUsage(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Run ./computor_v1_bonus --help for the usage.")
 	os.Exit(1)
 }
 

@@ -11,7 +11,7 @@ import (
 // Solve finds the solutions of a reduced equation of degree 2 or less.
 func Solve(eq poly.Equation) Solution {
 	coeffs := eq.Coeffs
-	s := Solution{Coeffs: coeffs, A: coeffs[2], B: coeffs[1], C: coeffs[0]}
+	s := Solution{Coeffs: coeffs, A: coeffs[2], B: coeffs[1], C: coeffs[0], Scale: 1}
 	switch coeffs.Degree() {
 	case 0:
 		s.Kind = NoSolution
@@ -37,9 +37,13 @@ func Solve(eq poly.Equation) Solution {
 	return s
 }
 
-// solveDegreeTwo solves a * X^2 + b * X + c = 0, a not zero.
+// solveDegreeTwo solves a * X^2 + b * X + c = 0, a not zero. Coefficients so small
+// that b² or 4ac would underflow are first divided by s.Scale, which keeps the roots.
 func solveDegreeTwo(s *Solution, noise poly.PolyCoeffs) {
-	delta, ok := numeric.Discriminant(s.A, s.B, s.C, noise[2], noise[1], noise[0])
+	s.Scale = numeric.ScaleFor(s.A, s.B, s.C)
+	a, b, c := s.A/s.Scale, s.B/s.Scale, s.C/s.Scale
+	delta, ok := numeric.Discriminant(a, b, c,
+		noise[2]/s.Scale, noise[1]/s.Scale, noise[0]/s.Scale)
 	if !ok {
 		s.Kind = DeltaTooLarge
 		return
@@ -49,16 +53,16 @@ func solveDegreeTwo(s *Solution, noise poly.PolyCoeffs) {
 	switch {
 	case delta == 0:
 		s.Kind = DoubleRoot
-		s.X1 = -s.B / (2 * s.A)
+		s.X1 = -b / (2 * a)
 	case delta > 0:
 		s.Kind = TwoRealRoots
 		s.SqrtDelta = numeric.SqrtNewton(delta)
-		s.X1, s.X2 = realRoots(s.A, s.B, s.C, s.SqrtDelta)
+		s.X1, s.X2 = realRoots(a, b, c, s.SqrtDelta)
 	default:
 		s.Kind = TwoComplexRoots
 		s.SqrtDelta = numeric.SqrtNewton(-delta)
-		s.Re = -s.B / (2 * s.A)
-		s.Im = s.SqrtDelta / (2 * s.A)
+		s.Re = -b / (2 * a)
+		s.Im = s.SqrtDelta / (2 * a)
 	}
 }
 

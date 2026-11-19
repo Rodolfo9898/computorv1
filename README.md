@@ -111,11 +111,17 @@ No solution.
   gives `1 * X^1 = 0`. A lone `0`, the right side of `... = 0`, is not a term.
 - The degree is the one of the reduced form: `1 * X^3 + 1 * X^1 = 1 * X^3` has degree 1.
 - Solutions are printed with up to 10 significant digits: `10`, `0.25`, `1e+10`.
+- Coefficients of the reduced form too: 10 significant digits, more when 10 would
+  write another number than the one solved (`1.00000000001 * X^2` stays as it is).
+  Digits that are only the rounding of a sum are left out: `0.1 + 0.2` is `0.3`.
 - An equation that starts with a minus sign is an equation, not a flag:
   `./computor_v1 "-2.5 * X^2 + 10 * X^1 = 0"` gives 4 and 0.
 - Coefficients whose sum does not fit in a double (two of 1e308 added) are refused,
   and a solution that does not fit in one (a coefficient of 1e-310, written in
   full, next to one of 1) is reported: the program never prints `+Inf`.
+- The equation is one argument, between quotes: `./computor_v1 "1 * X^0" "= 0"`
+  is refused, since an equation left without quotes is cut by the shell (which
+  also replaces a `*` with file names).
 - An equation the parser does not understand, an empty standard input, or one that
   cannot be read, is refused with exit status 1. The reason goes to the standard
   error, followed by the usage:
@@ -177,13 +183,19 @@ the two features chosen to complete the five, since both are about the solutions
   no empty equation. Each kind has its colour: vocabulary in cyan, structure in
   yellow, the syntax mistakes of the parser in red. Without this feature, the
   mistakes are still refused, in plain text.
+  A refused equation is followed by one line pointing to `--help`, not by the
+  whole usage, so that the reason stays in sight.
 - **2. Irreducible fractions.** A solution, or each part of a complex one, is printed
   as a fraction when it is one: `-5/4`, `-1/5 + 2/5i`. An irrational solution
-  (`X^2 = 2`) stays a decimal, so that an approximation never passes for the exact
-  value.
+  (`X^2 = 2`) stays a decimal, and so does a decimal that is only close to a
+  fraction (`X = 0.3333333333333` gives `0.3333333333`, not `1/3`), so that an
+  approximation does not pass for the exact value.
 - **3. Intermediate steps.** The discriminant with its values, then only the formulas
   of the case at hand: the double root, the two real roots, or the real and
-  imaginary parts.
+  imaginary parts. For two real roots, one more line says how they are really
+  computed (see *Technical choices*), and for coefficients so small that the
+  equation is scaled, one line gives the scale and Δ is the one of the scaled
+  equation.
 - **4. Factored form.** The polynomial as a product: `(X - 1) * (X - 2)`, `(X + 1)^2`,
   `4 * (X + 5/4)`, `(X - (-1 + 2i)) * (X - (-1 - 2i))`.
 - **5. Solution check.** Each solution, real or complex, is put back into the reduced
@@ -217,9 +229,11 @@ Check: P(-1 - 2i) = 0
 
 $ ./computor_v1_bonus "X^ = 0"
 Parse error: missing exponent after '^', near the end of the side
+Run ./computor_v1_bonus --help for the usage.
 
 $ ./computor_v1_bonus mistakes "hello + X = 0"
 unknown word "hello": an equation has numbers, X, + - * ^ = and spaces only
+Run ./computor_v1_bonus --help for the usage.
 
 $ echo "X^2 - 1 = 0" | ./computor_v1_bonus freeform
 Reduced form: -1 + X^2 = 0
@@ -332,9 +346,10 @@ sources/
     check/             5. P(x) at each solution, in complex numbers
   input/               shared: the equation from the arguments or the standard input; flags
   poly/                shared: the reduced equation, coefficients and their noise, degree
-  numeric/             shared: square root (Newton), absolute value, rounding noise, discriminant
+  numeric/             shared: square root (Newton), absolute value, rounding noise, discriminant,
+                       the scale of an equation whose b² or 4ac would underflow
   equation/            shared: the reduction both parsers use: terms moved left, noise cleared
-  formatter/           shared: the reduced form, numbers, complex numbers
+  formatter/           shared: the reduced form and its coefficients, numbers, complex numbers
   solver/              shared:
     types.go           the case, the solution, the hooks the bonus fills in
     constants.go       the cases: no solution, degree 1, Δ > 0, ...
@@ -374,6 +389,11 @@ when it is no larger: `0.01X² + 0.2X + 1.3 = 0.3` has a double root at -10.
 - A small coefficient on its own, like `1e-10 * X^2`, is far above its noise and is
   kept: a fixed threshold (an earlier version cut everything under 1e-9) would turn
   that equation into one of degree 0.
+- Coefficients so small that b² or 4ac falls below the smallest normal double
+  (`1e-200 * X^2 + 1e-200 = 0`, written in full: 4ac would be 1e-400, so 0) are
+  divided by a power of two near the largest of them before Δ is computed. The
+  division is exact and the roots do not change: that equation gives ±i, where
+  the first version said Δ = 0 and x = 0.
 
 **The square root is Newton's method, until it stops moving:** `g = (g + v / g) / 2`,
 started at `v` (or 1 when `v < 1`), which is above the root. Every step then goes down,
@@ -406,8 +426,10 @@ stops. The first version cut on the signs and guessed, and accepted `1 2` as 12 
 `X^-1`.
 
 **A fraction is shown only when it is exact.** The continued fraction of the value is
-walked until a convergent equals it up to rounding (1e-13), with a denominator of
-10⁶ at most. An irrational value has no such convergent, and stays a decimal.
+walked until a convergent equals it up to the rounding of the computation (64 unit
+roundoffs, about 7e-15: `0.6 + 1.1 * X + 0.5 * X^2` gives -6/5 within 5 ulps), with
+a denominator of 10⁶ at most. An irrational value has no such convergent, and stays
+a decimal. The first version allowed 1e-13, and showed `X = 0.3333333333333` as 1/3.
 
 **The bonus reuses the mandatory part, which does not know about it.**
 `solver.Solve` only computes; `solver.Print` writes the result and calls hooks

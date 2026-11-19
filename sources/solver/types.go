@@ -12,7 +12,8 @@ type Solution struct {
 	Kind      Kind
 	Coeffs    poly.PolyCoeffs
 	A, B, C   float64 // the coefficients of X^2, X^1 and X^0
-	Delta     float64 // b² - 4ac, exactly 0 when it is within rounding noise
+	Scale     float64 // degree 2: A, B and C are divided by it before Δ (1 most of the time)
+	Delta     float64 // b² - 4ac of A, B, C / Scale, exactly 0 within rounding noise
 	SqrtDelta float64 // √|Δ|
 	X1, X2    float64 // the real solutions (X1 alone for OneRoot and DoubleRoot)
 	Re, Im    float64 // the complex solutions are Re + Im i and Re - Im i

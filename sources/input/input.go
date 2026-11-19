@@ -9,10 +9,15 @@ import (
 	"strings"
 )
 
-// Read grabs the equation either from provided args or STDIN (its first line).
+// Read grabs the equation either from its only argument or STDIN (its first line).
+// Several arguments are refused rather than joined: an equation left without
+// quotes is cut by the shell, which also replaces a * by the names of files.
 func Read(args []string) (string, error) {
-	if len(args) > 0 {
-		return strings.Join(args, " "), nil
+	if len(args) > 1 {
+		return "", fmt.Errorf("%d arguments: give the equation as a single one, between quotes", len(args))
+	}
+	if len(args) == 1 {
+		return args[0], nil
 	}
 
 	reader := bufio.NewReader(os.Stdin)

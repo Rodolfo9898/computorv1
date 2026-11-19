@@ -36,7 +36,7 @@ func main() {
 		refuse(err)
 	}
 
-	fmt.Printf("Reduced form: %s = 0\n", formatter.Reduced(eq.Coeffs))
+	fmt.Printf("Reduced form: %s = 0\n", formatter.Reduced(eq))
 	fmt.Printf("Polynomial degree: %d\n", eq.Coeffs.Degree())
 	solver.Print(solver.Solve(eq), solver.Hooks{})
 }

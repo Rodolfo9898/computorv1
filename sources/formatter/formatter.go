@@ -11,12 +11,13 @@ import (
 // Reduced builds the reduced form of the subject: every term as a * X^p. A zero
 // term written in the equation is kept up to the degree, as in the subject's
 // "5 * X^0 - 6 * X^1 + 0 * X^2 - 5.6 * X^3"; above the degree, a term is zero
-// because it cancelled out, and is left out.
-func Reduced(coeffs poly.PolyCoeffs) string {
-	degree := coeffs.Degree()
+// because it cancelled out, and is left out. Each coefficient is written with the
+// digits it needs (Coefficient).
+func Reduced(eq poly.Equation) string {
+	degree := eq.Coeffs.Degree()
 	keep := func(coef float64, exp int) bool { return exp <= degree }
-	return Join(coeffs, keep, func(coef float64, exp int) string {
-		return fmt.Sprintf("%s * X^%d", Number(coef), exp)
+	return Join(eq.Coeffs, keep, func(coef float64, exp int) string {
+		return fmt.Sprintf("%s * X^%d", Coefficient(coef, eq.Noise[exp]), exp)
 	}, "0 * X^0")
 }
 
